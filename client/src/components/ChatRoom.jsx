@@ -1,10 +1,33 @@
 import { useState } from 'react'
 import background from '/backgroundChatroom.jpg'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { io } from 'socket.io-client'
 
 const ChatRoom = () => {
-  const {id} = useParams()
+  const { id } = useParams()
+  const location = useLocation()
   const [chatRoom, setChatRoom] = useState(null)
+
+  useEffect(() => {
+    const { data } = location.state || {}
+
+    const socket = io("http://localhost:3002", {
+      auth: { token: data.token },
+    })
+
+    socket.on("connect", () => {
+      console.log("Kết nối socket thành công")
+    })
+
+    socket.on("connect_error", (err) => {
+      console.error("Lỗi kết nối socket:", err.message)
+    })
+
+    socket.on("userConnect", (data) => {
+      console.log("Sự kiện userConnect:", data)
+    })
+  })
 
   return (
     <div className="flex-1 flex flex-col">

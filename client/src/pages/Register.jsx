@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
@@ -6,6 +6,10 @@ const Register = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
+  const email = useRef("")
+  const name = useRef("")
+  const password = useRef("")
+  const rePassword = useRef("")
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -25,6 +29,7 @@ const Register = () => {
               type='email'
               id='email'
               name='email'
+              ref={email}
               className='w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
               required
             />
@@ -38,82 +43,74 @@ const Register = () => {
               type='text'
               id='loginName'
               name='loginName'
+              ref={name}
               className='w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
               required
             />
           </div>
-
           <div>
-            <label htmlFor='displayName' className='block text-white mb-1'>
-              Tên hiển thị <span className='text-red-400'>*</span>
-            </label>
-            <input
-              type='text'
-              id='displayName'
-              name='displayName'
-              className='w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor='password' className='block text-white mb-1'>
-              Mật khẩu <span className='text-red-400'>*</span>
-            </label>
+            <div className='flex justify-between'>
+              <label htmlFor='password' className='block text-white mb-1'>
+                Mật khẩu <span className='text-red-400'>*</span>
+              </label>
+              <div className="mt-1 text-sm text-gray-300">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={() => setShowPassword(prev => !prev)}
+                  />
+                  Hiển thị
+                </label>
+              </div>
+            </div>
             <input
               type={showPassword ? 'text' : 'password'}
               id='password'
               name='password'
+              ref={password}
               className='w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
               required
             />
-            <div className="mt-1 text-sm text-gray-300">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={showPassword}
-                  onChange={() => setShowPassword(prev => !prev)}
-                />
-                Hiển thị
-              </label>
-            </div>
           </div>
-
           <div>
-            <label htmlFor='rePassword' className='block text-white mb-1'>
-              Nhập lại mật khẩu <span className='text-red-400'>*</span>
-            </label>
+            <div className='flex justify-between'>
+              <label htmlFor='rePassword' className='block text-white mb-1'>
+                Nhập lại mật khẩu <span className='text-red-400'>*</span>
+              </label>
+              <div className="mt-1 text-sm text-gray-300">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={showRePassword}
+                    onChange={() => setShowRePassword(prev => !prev)}
+                  />
+                  Hiển thị
+                </label>
+              </div>
+            </div>
             <input
               type={showRePassword ? 'text' : 'password'}
               id='rePassword'
               name='rePassword'
+              ref={rePassword}
               className='w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
               required
             />
-            <div className="mt-1 text-sm text-gray-300">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={showRePassword}
-                  onChange={() => setShowRePassword(prev => !prev)}
-                />
-                Hiển thị
-              </label>
-            </div>
           </div>
 
           <div className='space-y-1'>
             <button
               type='submit'
-              className='w-full py-3 bg-blue-600 hover:bg-blue-700 transition duration-200 text-white font-bold rounded-lg'
-              onClick={(e) => handleSubmit(e)}
+              className='w-full py-3 bg-blue-600 hover:bg-blue-800 transition duration-200 text-white font-bold rounded-lg'
+              onClick={() => handleSubmit()}
             >
               Đăng ký
             </button>
             <p className='text-white text-sm'>
               Đã có tài khoản?
-              <span className='text-blue-400 cursor-pointer text-sm' onClick={() => navigate('/login')}>
-                Đăng nhập
+              <span className='text-blue-400 cursor-pointer text-sm hover:text-blue-200' onClick={() => navigate('/login')}>
+                &nbsp;Đăng nhập
               </span>
             </p>
           </div>
