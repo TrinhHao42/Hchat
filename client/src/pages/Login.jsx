@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import server from '../configs/server.config'
+import connectSocket from '../middleware/connectSocket'
 
 const Login = () => {
   const navigate = useNavigate()
@@ -17,12 +19,13 @@ const Login = () => {
         throw new Error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu")
       }
 
-      const { data } = await axios.post("http://localhost:3001/login", {
+      const { data } = await axios.post(server.auth + "/auth/login", {
         userName: userName,
         password: password,
       })
 
-      navigate(data.redirectTo, {state: {data}})
+      connectSocket(data, navigate)
+
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message
       console.error("Đăng nhập thất bại:", errorMessage)
@@ -91,10 +94,10 @@ const Login = () => {
         <p className='text-center text-gray-400 text-sm'>
           Chưa có tài khoản?{' '}
           <span
-            onClick={() => navigate('/register')}
+            onClick={() => navigate('/auth/register')}
             className='text-blue-400 cursor-pointer hover:text-blue-200'
           >
-            &nbspĐăng ký
+            &nbsp;Đăng ký
           </span>
         </p>
       </div>

@@ -109,7 +109,7 @@ const Register = () => {
             </button>
             <p className='text-white text-sm'>
               Đã có tài khoản?
-              <span className='text-blue-400 cursor-pointer text-sm hover:text-blue-200' onClick={() => navigate('/login')}>
+              <span className='text-blue-400 cursor-pointer text-sm hover:text-blue-200' onClick={() => navigate('/auth/login')}>
                 &nbsp;Đăng nhập
               </span>
             </p>

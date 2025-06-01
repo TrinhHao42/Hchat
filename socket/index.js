@@ -8,13 +8,14 @@ require('dotenv').config();
 const app = express();
 const port = 3002;
 const SECRET_KEY = process.env.SECRET_KEY;
+const connectedUsers = new Map();
 
 app.use(cors());
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", 
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
   },
 });
@@ -23,23 +24,25 @@ io.use((socket, next) => {
   const token = socket.handshake.auth.token;
 
   if (!token) {
-    console.error("Thiếu token xác thực");
     return next(new Error("Thiếu token xác thực"));
   }
 
   try {
     const user = jwt.verify(token, SECRET_KEY);
+
+    if (connectedUsers.has(user.username)) {
+      return next(new Error("Tài khoản đã đăng nhập ở nơi khác."));
+    }
+
     socket.user = user;
-    console.log("Xác thực token thành công:", user);
     next();
   } catch (err) {
-    console.error("Lỗi xác thực token:", err.message);
     return next(new Error("Token không hợp lệ"));
   }
 });
 
 io.on("connection", (socket) => {
-  console.log(`✅ User kết nối: ${socket.user.username} (socket id: ${socket.id})`);
+  connectedUsers.set(socket.user.username, socket.id);
 
   socket.emit("userConnect", {
     message: "Bạn đã kết nối thành công!",
@@ -53,8 +56,10 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`❌ User ngắt kết nối: ${socket.user.username}`);
+    connectedUsers.delete(socket.user.username);
   });
 });
+
 
 server.listen(port, () => {
   console.log(`Socket server đang chạy tại http://localhost:${port}`);
