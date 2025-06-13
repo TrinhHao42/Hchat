@@ -5,7 +5,7 @@ const Home = () => {
   const navigate = useNavigate()
 
   return (
-    <div className="bg-gray-900 text-white min-h-screen flex flex-col">
+    <div className="text-white flex flex-col">
       <section className="flex flex-1 items-center justify-center text-center px-10 py-20 bg-[url(/backgroundLogin.jpg)] bg-cover bg-center">
         <div className="max-w-3xl">
           <h2 className="text-2xl xl:text-4xl lg:text-3xl font-bold mb-4">Kết nối dễ dàng – Trò chuyện mọi lúc</h2>

@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import server from '../configs/server.config'
 
 const Register = () => {
@@ -76,7 +77,7 @@ const Register = () => {
       return
     }
 
-    await axios(server.auth + '/auth/register', {
+    await axios.post(`${server.auth}/auth/register`, {
       email,
       name,
       password
