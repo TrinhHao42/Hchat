@@ -14,11 +14,10 @@ const connectSocket = (data, navigate) => {
     })
 
     socket.on("connect_error", (err) => {
-        console.error("Lỗi kết nối socket:", err.message)
+        alert(`Lỗi: Tài khoảng đang được đăng nhập`)
     })
 
     socket.on("userConnect", (res) => {
-        console.log("Sự kiện userConnect:", res)
         navigate(redirectTo, { state: {user} })
     })
 }

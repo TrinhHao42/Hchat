@@ -1,9 +1,10 @@
 const express = require("express")
 const cors = require("cors")
 const router = require('./routes/auth.route')
+require('dotenv')
 
 const app = express()
-const port = 3001
+const port = process.env.PORT
 
 
 app.use(express.json())

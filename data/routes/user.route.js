@@ -1,5 +1,6 @@
 const express = require('express')
 const User = require('../models/user')
+
 const router = express.Router()
 
 router.post('/user/get', async (req, res) => {
@@ -31,7 +32,7 @@ router.post('/user/get', async (req, res) => {
   }
 })
 
-router.post('/user/add', async (req, res) => {
+router.post('/user/register', async (req, res) => {
   try {
     const { user } = req.body;
 

@@ -28,7 +28,6 @@ const Login = () => {
 
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message
-      console.error("Đăng nhập thất bại:", errorMessage)
       alert(`Lỗi: ${errorMessage}`)
     }
   }
