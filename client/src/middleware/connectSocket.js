@@ -5,19 +5,22 @@ import server from '../configs/server.config'
 const connectSocket = (data, navigate) => {
     const { token, user, redirectTo } = data; 
 
-    const socket = io(server.socket, {
-        auth: { token: token },
+    const socket = io(`http://localhost:3002`, {
+        auth: { token },
+        reconnection: true
     })
 
     socket.on("connect", () => {
-        console.log("Kết nối socket thành công")
+        alert("Chào mừng bạn đến với HChat")
     })
 
     socket.on("connect_error", (err) => {
-        alert(`Lỗi: Tài khoảng đang được đăng nhập`)
+        const connectMessageError = err.message
+        alert(`Lỗi: ${connectMessageError}`)
+        socket.disconnect()
     })
 
-    socket.on("userConnect", (res) => {
+    socket.on("userConnect", () => {
         navigate(redirectTo, { state: {user} })
     })
 }

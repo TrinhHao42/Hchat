@@ -2,20 +2,19 @@ const express = require("express")
 const http = require("http")
 const { Server } = require("socket.io")
 const jwt = require("jsonwebtoken")
-const cors = require("cors")
+
 require('dotenv').config()
 
 const app = express()
 const port = process.env.PORT
 const SECRET_KEY = process.env.SECRET_KEY
+const CLIENT = process.env.CLIENT
 const connectedUsers = new Map()
-
-app.use(cors())
 
 const server = http.createServer(app)
 const io = new Server(server, {
   cors: {
-    origin:  process.env.CLIENT,
+    origin: CLIENT,
     methods: ["GET", "POST"],
   }
 })

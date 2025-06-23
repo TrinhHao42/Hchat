@@ -1,6 +1,5 @@
 const server = {
-    auth: "http://localhost:3001",
-    socket: "http://localhost:3002"
+    apiGateway: "http://localhost:2000"
 }
 
 export default server

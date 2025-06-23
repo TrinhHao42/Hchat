@@ -1,4 +1,5 @@
 const mailOptions = (email, verificationToken) => {
+  const verificationUrl = `http://localhost:5173/auth/register?token=${verificationToken}`;
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="vi">
@@ -25,7 +26,7 @@ const mailOptions = (email, verificationToken) => {
             <table align="center" border="0" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="padding: 15px 0;">
-                  <a href="http://localhost:3001/auth/verify/${verificationToken}" style="display: inline-block; padding: 14px 30px; background-color: #4CAF50; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background-color 0.3s;">Xác Thực Ngay</a>
+                  <a href="${verificationUrl}" style="display: inline-block; padding: 14px 30px; background-color: #4CAF50; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 500; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: background-color 0.3s;">Xác Thực Ngay</a>
                 </td>
               </tr>
             </table>
@@ -41,13 +42,13 @@ const mailOptions = (email, verificationToken) => {
       </table>
     </body>
     </html>
-  `
+  `;
   return {
     from: process.env.ADMIN_MAIL,
     to: email,
     subject: 'Xác thực tài khoản',
-    text: `Click vào link để xác thực: http://localhost:3001/auth/verify/${verificationToken}`,
-    html: htmlContent
+    text: `Click vào link để xác thực: ${verificationUrl}`,
+    html: htmlContent,
   };
 };
 

@@ -19,6 +19,8 @@
     "react-icons": "^5.5.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.6.1",
+    "reduct": "^3.3.1",
+    "scss": "^0.2.4",
     "socket.io-client": "^4.8.1",
     "tailwindcss": "^4.1.7"
   },
@@ -31,6 +33,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "sass-embedded": "^1.89.2",
     "vite": "^6.3.5"
   }
 }

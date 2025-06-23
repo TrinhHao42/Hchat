@@ -1,11 +1,15 @@
 import React, { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import axios from 'axios'
 import server from '../configs/server.config'
 import connectSocket from '../middleware/connectSocket'
+import { loginUser } from '../services/UserSlice'
 
 const Login = () => {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
+
   const nameRef = useRef("")
   const passwordRef = useRef("")
   const [showPassword, setShowPassword] = useState(false)
@@ -19,15 +23,16 @@ const Login = () => {
         throw new Error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu")
       }
 
-      const { data } = await axios.post(server.auth + "/auth/login", {
+      const { data } = await axios.post(server.apiGateway + "/auth/login", {
         userName: userName,
         password: password,
       })
 
-      connectSocket(data, navigate)
+      dispatch(loginUser({ user: data.user, token: data.token }))
 
+      connectSocket(data, navigate)
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message
+      const errorMessage = err.response?.data?.message
       alert(`Lỗi: ${errorMessage}`)
     }
   }
