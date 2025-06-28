@@ -2,11 +2,14 @@ const express = require('express')
 const jwt = require("jsonwebtoken")
 const axios = require("axios")
 const crypto = require('crypto')
-const bcrypt = require('bcrypt')
+const { v4 } = require('uuid')
 const nodemailer = require('../configs/nodeMailer')
 const redisClient = require('../configs/redisClient')
 const transporter = require('../configs/nodeMailer')
 const { mailOptions } = require('../configs/mailOption')
+const { error } = require('console')
+const { decode } = require('punycode')
+const { json } = require('stream/consumers')
 
 require('dotenv').config()
 
@@ -31,13 +34,19 @@ router.post("/login", async (req, res) => {
         }
       })
 
-    const token = jwt.sign(
-      { id: user.id, username: user.userName },
+    const accessToken = jwt.sign(
+      { user },
       SECRET_KEY,
-      { expiresIn: "1h" }
+      { expiresIn: "5s" }
     )
 
-    res.status(200).json({ redirectTo: '/user/chatroom', token, user })
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      SECRET_KEY,
+      { expiresIn: "7d" }
+    )
+
+    res.status(200).json({ accessToken, refreshToken, user })
   } catch (err) {
     const message = err.response?.data?.message || err.message || "Đăng nhập thất bại"
     res.status(400).json({ message })
@@ -96,6 +105,29 @@ router.get('/verify/:token', async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: err.message })
   }
+})
+
+router.get('/checkLogin', (req, res) => {
+  const accessToken = req.headers['authorization']
+
+  if (!accessToken)
+    return res.status(401).json({ message: 'Thiếu token xác thực' })
+
+
+  jwt.verify(accessToken, SECRET_KEY, (error, decoded) => {
+    if (error)
+      if (error.name === 'TokenExpiredError')
+        return res.status(401).json({ message: 'Token hết hạn' })
+      else
+        return res.status(401).json({ message: 'Sai token' })
+
+    res.status(200).json(decoded)
+  })
+})
+
+router.get('/refreshAccessToken', (req, res) => {
+  const refreshToken = req.headers['authorization']
+
 })
 
 module.exports = router

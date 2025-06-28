@@ -1,38 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useParams } from 'react-router-dom'
 import background from '/backgroundChatroom.jpg'
 
 const ChatRoom = () => {
-  const location = useLocation()
   const [chatRoom, setChatRoom] = useState(null)
-  const { user, token } = useSelector((state) => state.user)
-
-  useEffect(() => {
-    console.log(user)
-    console.log(token)
-  }, [user, token])
+  const [message, setMessage] = useState([])
 
   return (
     <div className="flex-1 flex flex-col bg-gray-900 text-white w-full h-full">
-      {chatRoom && (
-        <div className="h-16 bg-gray-800 px-4 md:px-6 flex items-center space-x-4 shadow">
-          <img
-            src={user?.avatar}
-            alt="avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <p className="text-lg font-semibold truncate">{user?.userName}</p>
-        </div>
-      )}
 
-      {/* Main Content */}
       <div className="flex-1 p-4 md:p-6 flex flex-col justify-end relative">
         {chatRoom ? (
           <>
-            {/* Tin nhắn */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scrollbar-thin scrollbar-thumb-gray-600">
-              {/* Tin nhắn mẫu */}
               <div className="self-start max-w-[75%] bg-gray-700 p-3 rounded-xl">
                 <p className="text-sm">Chào bạn!</p>
               </div>

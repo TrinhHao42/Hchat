@@ -8,10 +8,10 @@ const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [showForm, setShowForm] = useState(true); // Kiểm soát hiển thị form
-  const [isLoading, setIsLoading] = useState(false); // Trạng thái loading
-  const [successMessage, setSuccessMessage] = useState(''); // Thông báo thành công
-  const [errorMessage, setErrorMessage] = useState(''); // Thông báo lỗi
+  const [showForm, setShowForm] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
 
@@ -27,18 +27,17 @@ const Register = () => {
     repassword: '',
   });
 
-  // Kiểm tra token xác thực từ URL khi component mount
   useEffect(() => {
     const verifyToken = async () => {
       const token = new URLSearchParams(location.search).get('token');
       if (token) {
-        setShowForm(false); // Ẩn form khi có token
+        setShowForm(false);
         try {
           const response = await axios.get(`${server.apiGateway}/auth/verify/${token}`);
-          setSuccessMessage(response.data.message); // "Xác thực thành công..."
+          setSuccessMessage(response.data.message);
           setTimeout(() => {
             navigate('/auth/login');
-          }, 3000); // Điều hướng sau 3 giây
+          }, 3000);
         } catch (err) {
           setErrorMessage(err.response?.data?.message || 'Lỗi server xác thực');
         }
@@ -47,7 +46,9 @@ const Register = () => {
     verifyToken();
   }, [location.search, navigate]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
     const email = emailRef.current.value.trim();
     const name = nameRef.current.value.trim();
     const password = passwordRef.current.value;
@@ -103,7 +104,6 @@ const Register = () => {
       return;
     }
 
-    // Ẩn form và hiển thị loading
     setShowForm(false);
     setIsLoading(true);
 
@@ -113,7 +113,7 @@ const Register = () => {
         name,
         password,
       });
-      setSuccessMessage(response.data.message); // "Email xác thực đã được gửi"
+      setSuccessMessage(response.data.message);
     } catch (err) {
       setErrorMessage(err.response?.data?.message || 'Lỗi server xác thực');
     } finally {
@@ -128,104 +128,105 @@ const Register = () => {
           <>
             <h2 className="text-center text-white text-3xl font-extrabold">Tạo tài khoản</h2>
 
-            <div>
-              <label htmlFor="email" className="block text-white mb-1">
-                Email <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                ref={emailRef}
-                className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
-            </div>
-
-            <div>
-              <label htmlFor="loginName" className="block text-white mb-1">
-                Tên đăng nhập <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                id="loginName"
-                name="loginName"
-                ref={nameRef}
-                className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
-            </div>
-
-            <div>
-              <div className="flex justify-between">
-                <label htmlFor="password" className="block text-white mb-1">
-                  Mật khẩu <span className="text-red-400">*</span>
+            <form onSubmit={handleSubmit}>
+              <div>
+                <label htmlFor="email" className="block text-white mb-1">
+                  Email <span className="text-red-400">*</span>
                 </label>
-                <div className="mt-1 text-sm text-gray-300">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={showPassword}
-                      onChange={() => setShowPassword((prev) => !prev)}
-                    />
-                    Hiển thị
-                  </label>
-                </div>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  ref={emailRef}
+                  className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email}</p>}
               </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                ref={passwordRef}
-                className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password}</p>}
-            </div>
 
-            <div>
-              <div className="flex justify-between">
-                <label htmlFor="rePassword" className="block text-white mb-1">
-                  Nhập lại mật khẩu <span className="text-red-400">*</span>
+              <div>
+                <label htmlFor="loginName" className="block text-white mb-1">
+                  Tên đăng nhập <span className="text-red-400">*</span>
                 </label>
-                <div className="mt-1 text-sm text-gray-300">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={showRePassword}
-                      onChange={() => setShowRePassword((prev) => !prev)}
-                    />
-                    Hiển thị
-                  </label>
-                </div>
+                <input
+                  type="text"
+                  id="loginName"
+                  name="loginName"
+                  ref={nameRef}
+                  className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
               </div>
-              <input
-                type={showRePassword ? 'text' : 'password'}
-                id="rePassword"
-                name="rePassword"
-                ref={rePasswordRef}
-                className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.repassword && <p className="text-red-400 text-sm mt-1">{errors.repassword}</p>}
-            </div>
 
-            <div className="space-y-1">
-              <button
-                type="submit"
-                className="w-full py-3 bg-blue-600 hover:bg-blue-800 transition duration-200 text-white font-bold rounded-lg"
-                onClick={handleSubmit}
-              >
-                Đăng ký
-              </button>
-              <p className="text-white text-sm text-center">
-                Đã có tài khoản?{' '}
-                <span
-                  className="text-blue-400 cursor-pointer text-sm hover:text-blue-200"
-                  onClick={() => navigate('/auth/login')}
+              <div>
+                <div className="flex justify-between">
+                  <label htmlFor="password" className="block text-white mb-1">
+                    Mật khẩu <span className="text-red-400">*</span>
+                  </label>
+                  <div className="mt-1 text-sm text-gray-300">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={showPassword}
+                        onChange={() => setShowPassword((prev) => !prev)}
+                      />
+                      Hiển thị
+                    </label>
+                  </div>
+                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password"
+                  ref={passwordRef}
+                  className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password}</p>}
+              </div>
+
+              <div>
+                <div className="flex justify-between">
+                  <label htmlFor="rePassword" className="block text-white mb-1">
+                    Nhập lại mật khẩu <span className="text-red-400">*</span>
+                  </label>
+                  <div className="mt-1 text-sm text-gray-300">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={showRePassword}
+                        onChange={() => setShowRePassword((prev) => !prev)}
+                      />
+                      Hiển thị
+                    </label>
+                  </div>
+                </div>
+                <input
+                  type={showRePassword ? 'text' : 'password'}
+                  id="rePassword"
+                  name="rePassword"
+                  ref={rePasswordRef}
+                  className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {errors.repassword && <p className="text-red-400 text-sm mt-1">{errors.repassword}</p>}
+              </div>
+
+              <div className="space-y-1">
+                <button
+                  type="submit"
+                  className="w-full mt-2 py-3 bg-blue-600 hover:bg-blue-800 transition duration-200 text-white font-bold rounded-lg"
                 >
-                  Đăng nhập
-                </span>
-              </p>
-            </div>
+                  Đăng ký
+                </button>
+                <p className="text-white text-sm text-center">
+                  Đã có tài khoản?{' '}
+                  <span
+                    className="text-blue-400 cursor-pointer text-sm hover:text-blue-200"
+                    onClick={() => navigate('/auth/login')}
+                  >
+                    Đăng nhập
+                  </span>
+                </p>
+              </div>
+            </form>
           </>
         ) : (
           <div className="text-center space-y-4">
