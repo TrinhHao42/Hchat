@@ -1,38 +1,49 @@
 import { useState, useEffect } from "react"
 import { useDispatch } from "react-redux"
-import Cookies from 'js-cookie'
+import axios from "axios"
+import Cookies from "js-cookie"
 import { loginUser } from "../services/UserSlice"
-
 
 const useRefreshToken = (url, refreshToken) => {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const [data, setData] = useState(null)
 
     const dispatch = useDispatch()
 
     useEffect(() => {
-        const refreshToken = async () => {
+        const refreshAccessToken = async () => {
+            if (!refreshToken) {
+                setError("Thiếu refresh token")
+                setLoading(false)
+                return
+            }
+
             setLoading(true)
 
             await axios.get(url, {
                 headers: {
-                    'authorization': refreshToken
-                }
+                    authorization: `Bearer ${refreshToken}`,
+                },
             })
-                .then(data => {
-                    const { accessToken, user } = data
-                    Cookies.set('accessToken', accessToken)
-
-                    dispatch(loginUser(user))
+                .then(response => {
+                    const { accessToken, user } = response.data
+                    setData({ accessToken, user })
+                    Cookies.set("accessToken", accessToken)
+                    if (user) {
+                        dispatch(loginUser(user))
+                    }
                 })
-                .catch(error => setError(error))
+                .catch(error => {
+                    setError(error.response?.data?.message || error.message)
+                })
                 .finally(setLoading(false))
         }
+        
+        refreshAccessToken()
+    }, [refreshToken, dispatch, url])
 
-        refreshToken()
-    }, [refreshToken])
-
-    return {loading, error}
+return { loading, error, data }
 }
 
 export default useRefreshToken

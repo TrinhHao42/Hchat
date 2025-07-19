@@ -2,19 +2,13 @@ const express = require('express')
 const jwt = require("jsonwebtoken")
 const axios = require("axios")
 const crypto = require('crypto')
-const { v4 } = require('uuid')
-const nodemailer = require('../configs/nodeMailer')
 const redisClient = require('../configs/redisClient')
 const transporter = require('../configs/nodeMailer')
 const { mailOptions } = require('../configs/mailOption')
-const { error } = require('console')
-const { decode } = require('punycode')
-const { json } = require('stream/consumers')
 
 require('dotenv').config()
 
 const SECRET_KEY = process.env.SECRET_KEY
-const API_GATEWAY = process.env.API_GATEWAY
 const DATA_SERVER = process.env.DATA_SERVER
 
 const router = express.Router()
@@ -23,7 +17,7 @@ router.post("/login", async (req, res) => {
   const { userName, password } = req.body
 
   try {
-    const { data: user } = await axios.post(`${DATA_SERVER}/user/get`,
+    const { data: user } = await axios.post(`${DATA_SERVER}/user/getUserByUserNameAndPassword`,
       {
         userName,
         password
@@ -35,13 +29,13 @@ router.post("/login", async (req, res) => {
       })
 
     const accessToken = jwt.sign(
-      { user },
+      { id: user },
       SECRET_KEY,
-      { expiresIn: "5s" }
+      { expiresIn: "5m" }
     )
 
     const refreshToken = jwt.sign(
-      { id: user.id },
+      { id: user },
       SECRET_KEY,
       { expiresIn: "7d" }
     )
@@ -54,14 +48,16 @@ router.post("/login", async (req, res) => {
 })
 
 router.post("/register", async (req, res) => {
-  const { email, name, password } = req.body
+  const { email, userName, password } = req.body
 
   try {
     const verificationToken = crypto.randomBytes(32).toString('hex')
-    const userData = { email, userName: name, password }
+    const userData = { U_email: email, U_user_name: userName, U_password: password }
+    
+
     await redisClient.set(`verify:${verificationToken}`, JSON.stringify(userData), {
       EX: 60,
-    });
+    })
 
     const mailConfig = mailOptions(email, verificationToken)
     await transporter.sendMail(mailConfig)
@@ -79,14 +75,13 @@ router.get('/verify/:token', async (req, res) => {
 
   try {
     const userDataString = await redisClient.get(`verify:${token}`)
-
     if (!userDataString) {
       return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn' })
     }
 
     const userData = JSON.parse(userDataString)
 
-    const { data: newUser } = await axios.post(`${DATA_SERVER}/user/register`,
+    const { data: newUser } = await axios.post(`${DATA_SERVER}/user/registerNewUser`,
       { user: userData },
       {
         headers: {
@@ -107,27 +102,58 @@ router.get('/verify/:token', async (req, res) => {
   }
 })
 
-router.get('/checkLogin', (req, res) => {
-  const accessToken = req.headers['authorization']
+router.get("/checkAccessToken", (req, res) => {
+  const authHeader = req.headers["authorization"]
+  const accessToken = authHeader && authHeader.replace("Bearer ", "")
 
-  if (!accessToken)
-    return res.status(401).json({ message: 'Thiếu token xác thực' })
+  if (!accessToken) {
+    return res.status(401).json({ error: "missing_token", message: "Thiếu token xác thực" })
+  }
 
+  jwt.verify(accessToken, process.env.SECRET_KEY || "your-secret-key", (error, decoded) => {
+    if (error) {
+      if (error.name === "TokenExpiredError") {
+        return res.status(401).json({ error: "token_expired", message: "Token hết hạn" })
+      }
+      return res.status(401).json({ error: "invalid_token", message: "Sai token" })
+    }
 
-  jwt.verify(accessToken, SECRET_KEY, (error, decoded) => {
-    if (error)
-      if (error.name === 'TokenExpiredError')
-        return res.status(401).json({ message: 'Token hết hạn' })
-      else
-        return res.status(401).json({ message: 'Sai token' })
+    const user = {
+      id: decoded.U_id,
+      username: decoded.U_user_name,
+    }
 
-    res.status(200).json(decoded)
+    res.status(200).json({ user })
   })
 })
 
-router.get('/refreshAccessToken', (req, res) => {
-  const refreshToken = req.headers['authorization']
+router.get("/refreshAccessToken", (req, res) => {
+  const refreshToken = req.headers["authorization"]
 
+  if (!refreshToken) {
+    return res.status(401).json({ message: "Thiếu refresh token" })
+  }
+
+  jwt.verify(refreshToken.replace("Bearer ", ""), SECRET_KEY, (error, decoded) => {
+    if (error) {
+      if (error.name === "TokenExpiredError") {
+        return res.status(401).json({ message: "Refresh token hết hạn" })
+      }
+      return res.status(401).json({ message: "Sai refresh token" })
+    }
+
+    const user = decoded
+    const newAccessToken = jwt.sign(
+      { user },
+      SECRET_KEY,
+      { expiresIn: "15m" }
+    )
+
+    res.status(200).json({
+      accessToken: newAccessToken,
+      user,
+    })
+  })
 })
 
 module.exports = router

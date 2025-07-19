@@ -13,6 +13,7 @@ const UserLayout = () => {
     <div className="h-screen w-screen flex flex-col bg-gray-900 text-white overflow-hidden md:flex-row">
       <div className="md:hidden p-4 bg-gradient-to-r from-gray-800 to-gray-900 flex justify-between items-center shadow-lg">
         <FaUserCircle className="text-3xl cursor-pointer text-indigo-400" />
+        
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-white">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />

@@ -50,7 +50,7 @@ const Register = () => {
     e.preventDefault()
 
     const email = emailRef.current.value.trim();
-    const name = nameRef.current.value.trim();
+    const userName = nameRef.current.value.trim();
     const password = passwordRef.current.value;
     const repassword = rePasswordRef.current.value;
 
@@ -73,9 +73,9 @@ const Register = () => {
       emailRef.current.focus();
     }
 
-    if (!name) {
+    if (!userName) {
       if (!hasError) nameRef.current.focus();
-      newErrors.name = 'Tên đăng nhập không được để trống';
+      newErrors.userName = 'Tên đăng nhập không được để trống';
       hasError = true;
     }
 
@@ -110,7 +110,7 @@ const Register = () => {
     try {
       const response = await axios.post(`${server.apiGateway}/auth/register`, {
         email,
-        name,
+        userName,
         password,
       });
       setSuccessMessage(response.data.message);

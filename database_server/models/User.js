@@ -2,60 +2,83 @@ const mongoose = require("mongoose")
 const bcrypt = require('bcrypt')
 
 const schema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.ObjectId,
+    U_user_name: {
+        type: String,
+        require: true,
+        default: "UserNew"
     },
-    userName: String,
-    password: {
+    U_password: {
         type: String,
         required: true
     },
-    avatar: {
+    U_avatar: {
         type: String,
+        require: true,
         default: ""
     },
-    email: {
+    U_email: {
         type: String,
         required: true,
         unique: true
     },
-    contacts: [
+    U_contacts: [
         {
-            userId: String,
-            userName: String,
-            avatar: String,
-            rememberName: String
+            U_id: {
+                type: Number,
+                require: true
+            },
+            U_avatar: {
+                type: String,
+                default: ""
+            },
+            U_remember_name: {
+                type: String,
+                require: true
+            }
         }
     ],
-    dateCreate: {
+    U_creator_id: {
+        type: Number,
+        require: true
+    },
+    U_modifier_id: {
+        type: Number
+    },
+    U_deleter_id: {
+        type: Number
+    },
+    U_create_at: {
         type: Date,
         default: Date.now
     },
-    dateUpdate: {
+    U_update_at: {
         type: Date,
-        default: Date.now
+        default: 0
+    },
+    U_delete_at: {
+        type: Date,
+        default: 0
+    },
+    U_version: {
+        type: Number,
+        require: true,
+        default: 0.0
     }
 })
 
 schema.pre('save', async function (next) {
-    if (this.isModified('password') || this.isNew) {
-        try {
-            const salt = await bcrypt.genSalt(10)
-            this.password = await bcrypt.hash(this.password, salt)
-            this.dateUpdate = Date.now()
-        } catch (err) {
-            return next(err)
-        }
+    try {
+        const salt = await bcrypt.genSalt(10)
+        this.U_password = await bcrypt.hash(this.U_password, salt)
+    } catch (err) {
+        return next(err)
     }
+
     next()
 })
 
 schema.methods.comparePassword = async function (candidatePassword) {
-    try {
-        return await bcrypt.compare(candidatePassword, this.password)
-    } catch (error) {
-        throw error
-    }
+    return await bcrypt.compare(candidatePassword, this.U_password)
 }
 
 const User = mongoose.model('User', schema)

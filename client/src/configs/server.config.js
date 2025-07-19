@@ -1,5 +1,5 @@
 const server = {
-    apiGateway: "http://localhost:2000"
+    apiGateway: "http://localhost:4000"
 }
 
 export default server

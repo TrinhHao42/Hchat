@@ -4,7 +4,6 @@ import { useDispatch } from 'react-redux'
 import axios from 'axios'
 import server from '../configs/server.config'
 import connectSocket from '../services/connectSocket'
-import Cookies from 'js-cookie'
 import { loginUser } from '../services/UserSlice'
 
 const Login = () => {
@@ -26,14 +25,10 @@ const Login = () => {
         throw new Error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu")
       }
 
-      const { data } = await axios.post(server.apiGateway + "/auth/login", {
+      const { user } = await axios.post(server.apiGateway + "/auth/login", {
         userName, password
       })
 
-      const { user, accessToken, refreshToken } = data
-
-      Cookies.set('accessToken', accessToken)
-      Cookies.set('refreshToken', refreshToken)
       dispatch(loginUser({ user }))
 
       connectSocket(navigate)

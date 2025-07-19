@@ -27,5 +27,5 @@ app.use("/data/api", checkAPIToken, createProxyMiddleware({
 }))
 
 app.listen(PORT, () => {
-  console.log("API Gateway is running on port: http://localhost:2000")
+  console.log(`API Gateway is running on port: http://localhost:${PORT}`)
 })

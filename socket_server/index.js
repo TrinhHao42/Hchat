@@ -50,7 +50,7 @@ io.on("connection", (socket) => {
   })
 
   socket.on("disconnect", () => {
-    console.log(`❌ User ngắt kết nối: ${socket.user.username}`)
+    console.log(`User ngắt kết nối: ${socket.user.username}`)
     connectedUsers.delete(socket.user.username)
   })
 })
