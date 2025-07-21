@@ -46,7 +46,7 @@ const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     })
 
-    res.status(200).json(user) 
+    res.status(200).json(user)
   } catch (err) {
     const message = err.response?.data?.message || err.message || "Đăng nhập thất bại"
     res.status(400).json({ message })
@@ -88,12 +88,7 @@ const verificationRegisterToken = async (req, res) => {
     const userData = JSON.parse(userDataString)
 
     const { data: newUser } = await axios.post(`${DATA_SERVER}/user/registerNewUser`,
-      { user: userData },
-      {
-        headers: {
-          'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
-        }
-      }
+      { user: userData }
     )
 
     if (!newUser) {
@@ -109,57 +104,40 @@ const verificationRegisterToken = async (req, res) => {
 }
 
 const checkAccessToken = (req, res) => {
-  const authHeader = req.headers["authorization"]
-  const accessToken = authHeader && authHeader.replace("Bearer ", "")
+  try {
+    const accessToken = req.cookies.accessToken
 
-  if (!accessToken) {
-    return res.status(401).json({ error: "missing_token", message: "Thiếu token xác thực" })
-  }
+    if (!accessToken) {
+      return res.status(401).json({ error: "missing_token", message: "Thiếu token xác thực" })
+    }
 
-  jwt.verify(accessToken, process.env.SECRET_KEY || "your-secret-key", (error, decoded) => {
-    if (error) {
-      if (error.name === "TokenExpiredError") {
-        return res.status(401).json({ error: "token_expired", message: "Token hết hạn" })
+    jwt.verify(accessToken, process.env.SECRET_KEY, async (error, decoded) => {
+      if (error) {
+        if (error.name === "TokenExpiredError") {
+          return res.status(401).json({ error: "token_expired", message: "Token hết hạn" })
+        }
+        return res.status(401).json({ error: "invalid_token", message: "Sai token" })
       }
-      return res.status(401).json({ error: "invalid_token", message: "Sai token" })
-    }
 
-    const user = {
-      id: decoded.U_id,
-      username: decoded.U_user_name,
-    }
+      const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
+        { email: decoded.id.U_email },
+        {
+        headers: {
+          'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
+        }
+      })
 
-    res.status(200).json({ user })
-  })
+      return res.status(200).json({ user: response.data })
+    })
+  } catch (err) {
+    console.error("Lỗi trong checkAccessToken:", err)
+    return res.status(500).json({ error: "internal_server_error", message: "Lỗi máy chủ" })
+  }
 }
 
+
 const refreshAccessToken = (req, res) => {
-  const refreshToken = req.headers["authorization"]
 
-  if (!refreshToken) {
-    return res.status(401).json({ message: "Thiếu refresh token" })
-  }
-
-  jwt.verify(refreshToken.replace("Bearer ", ""), SECRET_KEY, (error, decoded) => {
-    if (error) {
-      if (error.name === "TokenExpiredError") {
-        return res.status(401).json({ message: "Refresh token hết hạn" })
-      }
-      return res.status(401).json({ message: "Sai refresh token" })
-    }
-
-    const user = decoded
-    const newAccessToken = jwt.sign(
-      { user },
-      SECRET_KEY,
-      { expiresIn: "15m" }
-    )
-
-    res.status(200).json({
-      accessToken: newAccessToken,
-      user,
-    })
-  })
 }
 
 

@@ -1,6 +1,7 @@
 const express = require("express")
 const cors = require("cors")
 const router = require('./routes/auth.route')
+const cookieParse = require('cookie-parser')
 require('dotenv').config()
 
 const app = express()
@@ -14,6 +15,8 @@ app.use(cors(
     credentials: true
   }
 ))
+app.use(cookieParse())
+
 app.use(router)
 
 app.listen(port, () => {

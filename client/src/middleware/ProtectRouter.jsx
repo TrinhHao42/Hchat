@@ -1,53 +1,39 @@
-import { Navigate } from "react-router-dom"
-import Cookies from "js-cookie"
-import server from "../configs/server.config"
-import useCheckLoginUser from "../hooks/useCheckLoginUser"
-import useRefreshToken from "../hooks/useRefreshToken"
+import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
-import { logOutUser } from "../services/UserSlice"
+import { Navigate } from "react-router-dom"
+import axiosInstance from "../configs/axios"
+import { loginUser, logOutUser } from "../services/UserSlice"
 
 const ProtectRouter = ({ children }) => {
-    const accessToken = Cookies.get("accessToken")
-    const refreshToken = Cookies.get("refreshToken")
-
-    const { loading: checkLoading, error: checkError, data: checkData } =
-        useCheckLoginUser(`${server.apiGateway}/auth/checkAccessToken`, accessToken)
-
-    const { loading: refreshLoading, error: refreshError, data: refreshData } =
-        useRefreshToken(`${server.apiGateway}/auth/refreshAccessToken`, refreshToken)
-        
     const dispatch = useDispatch()
+    const [isAuthenticated, setIsAuthenticated] = useState(null)
 
-
-    if (checkLoading || refreshLoading) {
-        return <div>Loading...</div>
-    }
-
-    if (checkError) {
-        if (checkError === "Token hết hạn" || checkError.includes("expired")) {
-            if (refreshError) {
-                Cookies.set("accessToken", null)
-                Cookies.set("refreshToken", null)
-                dispatch(logOutUser())
-                return <Navigate to="/auth/login" />
-            }
-            if (refreshData?.accessToken) {
-                Cookies.set("accessToken", refreshData.accessToken)
-                return children
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const response = await axiosInstance('/auth/checkAccessToken')
+                dispatch(loginUser({ user: response.data }))
+                setIsAuthenticated(true)
+            } catch (err) {
+                if (err.response?.data?.error === 'invalid_token') {
+                    dispatch(logOutUser())
+                    setIsAuthenticated(false)
+                }
             }
         }
 
-        Cookies.set("accessToken", null)
-        Cookies.set("refreshToken", null)
-        dispatch(logOutUser())
+        checkAuth()
+    }, [dispatch])
+
+    if (isAuthenticated === null) {
+        return <div>Loading...</div>
+    }
+
+    if (!isAuthenticated) {
         return <Navigate to="/auth/login" />
     }
 
-    if (checkData) {
-        return children
-    }
-
-    return <div>Loading...</div>
+    return children
 }
 
 export default ProtectRouter

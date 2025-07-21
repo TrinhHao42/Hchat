@@ -6,7 +6,7 @@ import Register from './pages/Register'
 import UserLayout from './layouts/UserLayout'
 import ChatRoom from './components/ChatRoom'
 import Profile from './components/Profile'
-import ProtectRouter from './middleware/protectRouter'
+import ProtectRouter from './middleware/ProtectRouter'
 
 const App = () => {
 
@@ -22,9 +22,9 @@ const App = () => {
           <Route path="register" element={<Register />} />
         </Route>
         <Route path="/user" element={
-          <UserLayout />
-          // <ProtectRouter>
-          // </ProtectRouter>
+          <ProtectRouter>
+            <UserLayout />
+          </ProtectRouter>
         }>
           <Route index element={<Navigate to="chatroom" />} />
           <Route path="chatroom" element={<ChatRoom />} />

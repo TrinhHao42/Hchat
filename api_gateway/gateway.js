@@ -1,7 +1,9 @@
 const express = require('express')
+const cookieParser = require('cookie-parser') 
+require('dotenv').config()
+
 const { createProxyMiddleware } = require('http-proxy-middleware')
 const { checkAPIToken } = require("./middleware/auth.middleware")
-require('dotenv').config()
 
 const PORT = process.env.PORT
 const DATA_SERVER = process.env.DATA_SERVER
@@ -9,6 +11,7 @@ const SOCKET_SERVER = process.env.SOCKET_SERVER
 const AUTH_SERVER = process.env.AUTH_SERVER
 
 const app = express()
+app.use(cookieParser())
 
 app.use("/auth", createProxyMiddleware({
   target: AUTH_SERVER,

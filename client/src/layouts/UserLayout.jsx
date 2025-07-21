@@ -1,14 +1,13 @@
-import { useState } from 'react';
-import { FaUserCircle } from 'react-icons/fa';
-import { AiOutlineEllipsis } from 'react-icons/ai';
-import { FiSearch } from 'react-icons/fi';
-import { Outlet } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import {selectUser}  from '../services/UserSlice'
+import { useState } from 'react'
+import { FaUserCircle } from 'react-icons/fa'
+import { AiOutlineEllipsis } from 'react-icons/ai'
+import { FiSearch } from 'react-icons/fi'
+import { Outlet } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 
 const UserLayout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const user = useSelector(selectUser);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const {user} = useSelector((state) => state.user.user)
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gray-900 text-white overflow-hidden md:flex-row">
@@ -91,7 +90,7 @@ const UserLayout = () => {
         />
       )}
     </div>
-  );
-};
+  )
+}
 
-export default UserLayout;
+export default UserLayout
