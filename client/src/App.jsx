@@ -9,27 +9,29 @@ import Profile from './components/Profile'
 import ProtectRouter from './middleware/ProtectRouter'
 
 const App = () => {
-
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<RootLayout />}>
           <Route index element={<Home />} />
         </Route>
-        <Route path="/auth" element={<RootLayout />}>
-          <Route index element={<Navigate to="login" />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
+
+        <Route element={<ProtectRouter requireAuth={false} />}>
+          <Route path="/auth" element={<RootLayout />}>
+            <Route index element={<Navigate to="login" />} />
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+          </Route>
         </Route>
-        <Route path="/user" element={
-          <ProtectRouter>
-            <UserLayout />
-          </ProtectRouter>
-        }>
-          <Route index element={<Navigate to="chatroom" />} />
-          <Route path="chatroom" element={<ChatRoom />} />
-          <Route path="profile" element={<Profile />} />
+
+        <Route element={<ProtectRouter requireAuth={true} />}>
+          <Route path="/user" element={<UserLayout />}>
+            <Route index element={<Navigate to="chatroom" />} />
+            <Route path="chatroom" element={<ChatRoom />} />
+            <Route path="profile" element={<Profile />} />
+          </Route>
         </Route>
+
       </Routes>
     </BrowserRouter>
   )

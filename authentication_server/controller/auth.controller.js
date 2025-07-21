@@ -1,12 +1,11 @@
-const jwt = require("jsonwebtoken")
 const axios = require("axios")
 const crypto = require('crypto')
 const redisClient = require('../configs/redisClient')
 const transporter = require('../configs/nodeMailer')
 const { mailOptions } = require('../configs/mailOption')
 const cookieOptions = require('../configs/cookie')
+const { signToken, decodedToken } = require('../configs/jwt')
 
-const SECRET_KEY = process.env.SECRET_KEY
 const DATA_SERVER = process.env.DATA_SERVER
 
 const login = async (req, res) => {
@@ -24,21 +23,12 @@ const login = async (req, res) => {
         }
       })
 
-    const accessToken = jwt.sign(
-      { id: user },
-      SECRET_KEY,
-      { expiresIn: "5m" }
-    )
-
-    const refreshToken = jwt.sign(
-      { id: user },
-      SECRET_KEY,
-      { expiresIn: "7d" }
-    )
+    const accessToken = signToken(user, "5s")
+    const refreshToken = signToken(user, "7d")
 
     res.cookie("accessToken", accessToken, {
       ...cookieOptions,
-      maxAge: 10 * 60 * 1000
+      maxAge: 5 * 1000
     })
 
     res.cookie("refreshToken", refreshToken, {
@@ -103,43 +93,76 @@ const verificationRegisterToken = async (req, res) => {
   }
 }
 
-const checkAccessToken = (req, res) => {
-  try {
-    const accessToken = req.cookies.accessToken
+const checkAccessToken = async (req, res) => {
+  const accessToken = req.cookies.accessToken
 
-    if (!accessToken) {
-      return res.status(401).json({ error: "missing_token", message: "Thiếu token xác thực" })
+  if (!accessToken) {
+    return res.status(401).json({ error: "missing_token", message: "Thiếu token xác thực" })
+  }
+
+  const { error, decoded } = decodedToken(accessToken)
+  if (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "token_expired", message: "Token hết hạn" })
     }
 
-    jwt.verify(accessToken, process.env.SECRET_KEY, async (error, decoded) => {
-      if (error) {
-        if (error.name === "TokenExpiredError") {
-          return res.status(401).json({ error: "token_expired", message: "Token hết hạn" })
-        }
-        return res.status(401).json({ error: "invalid_token", message: "Sai token" })
-      }
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ error: "invalid_token", message: "Sai token" })
+    }
 
-      const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
-        { email: decoded.id.U_email },
-        {
-        headers: {
-          'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
-        }
-      })
-
-      return res.status(200).json({ user: response.data })
-    })
-  } catch (err) {
-    console.error("Lỗi trong checkAccessToken:", err)
     return res.status(500).json({ error: "internal_server_error", message: "Lỗi máy chủ" })
   }
+
+  const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
+    { email: decoded.id.U_email },
+    {
+      headers: {
+        'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
+      }
+    })
+
+  return res.status(200).json({ user: response.data })
 }
 
 
-const refreshAccessToken = (req, res) => {
+const refreshAccessToken = async (req, res) => {
+  const refreshToken = req.cookies.refreshToken
 
+  if (!refreshToken) {
+    return res.status(401).json({ error: "missing_token", message: "Thiếu token làm mới" })
+  }
+
+  const { error, decoded } = decodedToken(refreshToken)
+  if (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "token_expired", message: "Token làm mới hết hạn" })
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ error: "invalid_token", message: "Sai token làm mới" })
+    }
+
+    console.error("Lỗi trong refreshAccessToken:", error)
+    return res.status(500).json({ error: "internal_server_error", message: "Lỗi máy chủ" })
+  }
+
+  const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
+    { email: decoded.id.U_email },
+    {
+      headers: {
+        'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
+      }
+    })
+
+  const newAccessToken = signToken(response.data, '5s')
+
+  res.cookie("accessToken", newAccessToken, {
+    ...cookieOptions,
+    maxAge: 5 * 1000,
+  })
+
+  return res.status(200).json({ user: response.data })
 }
-
 
 module.exports = {
   login,
