@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { FaUserCircle } from 'react-icons/fa';
 import { AiOutlineEllipsis } from 'react-icons/ai';
 import { FiSearch } from 'react-icons/fi';
 import { Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import {selectUser}  from '../services/UserSlice'
 
 const UserLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const {user} = useSelector(state => state.user)
+  const user = useSelector(selectUser);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-gray-900 text-white overflow-hidden md:flex-row">
       <div className="md:hidden p-4 bg-gradient-to-r from-gray-800 to-gray-900 flex justify-between items-center shadow-lg">
         <FaUserCircle className="text-3xl cursor-pointer text-indigo-400" />
-        
+
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-white">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
@@ -22,16 +23,14 @@ const UserLayout = () => {
       </div>
 
       <aside
-        className={`${
-          isSidebarOpen ? 'flex' : 'hidden'
-        } md:flex md:w-1/4 lg:w-1/5 bg-gradient-to-b from-gray-800 to-gray-900 p-4 flex-col space-y-6 h-full overflow-y-auto transition-all duration-300 ${
-          isSidebarOpen ? 'fixed inset-y-0 left-0 z-50 w-1/1' : ''
-        } md:static md:w-1/4 lg:w-1/5 border-r border-gray-700`}
+        className={`${isSidebarOpen ? 'flex' : 'hidden'
+          } md:flex md:w-1/4 lg:w-1/5 bg-gradient-to-b from-gray-800 to-gray-900 p-4 flex-col space-y-6 h-full overflow-y-auto transition-all duration-300 ${isSidebarOpen ? 'fixed inset-y-0 left-0 z-50 w-1/1' : ''
+          } md:static md:w-1/4 lg:w-1/5 border-r border-gray-700`}
       >
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-2">
             <FaUserCircle className="text-4xl text-indigo-400" />
-            <span className="text-lg font-semibold text-white">{user.userName}</span>
+            <span className="text-lg font-semibold text-white">{user.U_user_name}</span>
           </div>
           <div className="md:hidden">
             <button onClick={() => setIsSidebarOpen(false)} className="text-gray-300 hover:text-white">
@@ -52,7 +51,7 @@ const UserLayout = () => {
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-indigo-700 scrollbar-track-gray-800">
-          {user.contacts.map((room, index) => (
+          {user.U_contacts.map((room, index) => (
             <div
               key={index}
               className="bg-gray-700 hover:bg-indigo-800 p-3 rounded-lg cursor-pointer flex space-x-3 items-center transition duration-200 transform hover:scale-105"

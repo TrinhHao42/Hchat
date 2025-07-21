@@ -33,7 +33,7 @@ const Register = () => {
       if (token) {
         setShowForm(false);
         try {
-          const response = await axios.get(`${server.apiGateway}/auth/verify/${token}`);
+          const response = await axiosInstance.get(`${server.apiGateway}/auth/verify/${token}`);
           setSuccessMessage(response.data.message);
           setTimeout(() => {
             navigate('/auth/login');

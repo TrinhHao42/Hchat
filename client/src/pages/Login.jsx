@@ -1,110 +1,137 @@
-import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
-import axios from 'axios'
-import server from '../configs/server.config'
-import connectSocket from '../services/connectSocket'
-import { loginUser } from '../services/UserSlice'
+import { useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { useDispatch } from "react-redux"
+import { loginUser } from "../services/UserSlice"
+import connectSocket from "../services/connectSocket"
+import axiosInstance from "../configs/axios"
 
 const Login = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
-  const nameRef = useRef("")
-  const passwordRef = useRef("")
+  const nameRef = useRef(null)
+  const passwordRef = useRef(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError(null)
+    setIsLoading(true)
 
     try {
       const userName = nameRef.current.value
       const password = passwordRef.current.value
 
       if (!userName || !password) {
-        throw new Error("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu")
+        throw new Error("Please enter both username and password")
       }
 
-      const { user } = await axios.post(server.apiGateway + "/auth/login", {
-        userName, password
+      const response = await axiosInstance.post("/auth/login", {
+        userName,
+        password,
       })
 
-      dispatch(loginUser({ user }))
-
+      dispatch(loginUser({ user: response.data }))
       connectSocket(navigate)
+      navigate("/")
     } catch (err) {
-      const errorMessage = err.response?.data?.message
-      alert(`Lỗi: ${errorMessage}`)
+      const errorMessage =
+        err.response?.data?.message || "An error occurred during login"
+      setError(errorMessage)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-
   return (
-    <div className='min-h-screen w-full bg-[url(/backgroundLogin.jpg)] bg-no-repeat bg-center bg-cover flex justify-center items-center px-4'>
-      <div className='w-full max-w-md bg-gray-900 bg-opacity-90 rounded-2xl shadow-xl p-8 space-y-6'>
-        <div className='text-center text-white space-y-2'>
-          <h2 className='text-3xl font-extrabold'>Chào mừng trở lại!</h2>
-          <p className='text-md'>Rất vui khi được gặp lại bạn</p>
+    <div className="min-h-screen w-full bg-[url(/backgroundLogin.jpg)] bg-no-repeat bg-center bg-cover flex justify-center items-center px-4">
+      <div className="w-full max-w-md bg-gray-900 bg-opacity-90 rounded-2xl shadow-xl p-8 space-y-6">
+        <div className="text-center text-white space-y-2">
+          <h2 className="text-3xl font-extrabold">Welcome back!</h2>
+          <p className="text-md">Great to see you again</p>
         </div>
 
-        <form action="" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor='name' className='block text-white mb-1'>
-              Tên đăng nhập
+        {error && (
+          <div className="text-red-500 text-center" role="alert">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="mb-4">
+            <label
+              htmlFor="name"
+              className="block text-white mb-1 font-medium"
+            >
+              Username
             </label>
             <input
-              type='text'
-              name='name'
-              id='name'
+              type="text"
+              name="name"
+              id="name"
               ref={nameRef}
-              className='w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              aria-required="true"
+              aria-describedby="name-error"
             />
           </div>
 
-          <div>
-            <div className='flex justify-between'>
-              <label htmlFor='password' className='block text-white mb-1'>
-                Mật khẩu
+          <div className="mb-4">
+            <div className="flex justify-between">
+              <label
+                htmlFor="password"
+                className="block text-white mb-1 font-medium"
+              >
+                Password
               </label>
               <div className="mt-1 text-sm text-gray-300">
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={showPassword}
-                    onChange={() => setShowPassword(prev => !prev)}
+                    onChange={() => setShowPassword((prev) => !prev)}
                   />
-                  Hiển thị
+                  Show
                 </label>
               </div>
             </div>
             <input
-              type={showPassword ? 'text' : 'password'}
-              name='password'
-              id='password'
+              type={showPassword ? "text" : "password"}
+              name="password"
+              id="password"
               ref={passwordRef}
-              className='w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              aria-required="true"
+              aria-describedby="password-error"
             />
-            <p className='text-blue-400 text-sm mt-1 cursor-pointer hover:text-blue-200'>
-              Quên mật khẩu?
+            <p
+              className="text-blue-400 text-sm mt-1 cursor-pointer hover:text-blue-200"
+              onClick={() => navigate("/auth/forgot-password")}
+            >
+              Forgot password?
             </p>
           </div>
+
           <button
-            className='w-full py-3 bg-blue-600 hover:bg-blue-800 transition duration-200 text-white font-bold rounded-lg'
-            type='submit'
+            className="w-full py-3 bg-blue-600 hover:bg-blue-800 transition duration-200 text-white font-bold rounded-lg disabled:opacity-50"
+            type="submit"
+            disabled={isLoading}
           >
-            Đăng nhập
+            {isLoading ? "Logging in..." : "Log in"}
           </button>
         </form>
 
-        <p className='text-center text-gray-400 text-sm'>
-          Chưa có tài khoản?{' '}
+        <p className="text-center text-gray-400 text-sm">
+          Don’t have an account?{" "}
           <span
-            onClick={() => navigate('/auth/register')}
-            className='text-blue-400 cursor-pointer hover:text-blue-200'
+            onClick={() => navigate("/auth/register")}
+            className="text-blue-400 cursor-pointer hover:text-blue-200"
           >
-            &nbsp;Đăng ký
+            Sign up
           </span>
         </p>
       </div>

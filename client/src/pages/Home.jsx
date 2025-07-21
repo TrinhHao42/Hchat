@@ -1,9 +1,4 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-
 const Home = () => {
-  const navigate = useNavigate()
-
   return (
     <div className="text-white flex flex-col">
       <section className="flex flex-1 items-center justify-center text-center px-10 py-20 bg-[url(/backgroundLogin.jpg)] bg-cover bg-center">

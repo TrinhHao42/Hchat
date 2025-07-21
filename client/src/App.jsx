@@ -22,9 +22,9 @@ const App = () => {
           <Route path="register" element={<Register />} />
         </Route>
         <Route path="/user" element={
-          <ProtectRouter>
-            <UserLayout />
-          </ProtectRouter>
+          <UserLayout />
+          // <ProtectRouter>
+          // </ProtectRouter>
         }>
           <Route index element={<Navigate to="chatroom" />} />
           <Route path="chatroom" element={<ChatRoom />} />
