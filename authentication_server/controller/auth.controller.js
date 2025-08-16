@@ -1,7 +1,6 @@
 const jwt = require("jsonwebtoken")
 const axios = require("axios")
 const crypto = require('crypto')
-const redisClient = require('../configs/redisClient')
 const transporter = require('../configs/nodeMailer')
 const { mailOptions } = require('../configs/mailOption')
 const cookieOptions = require('../configs/cookie')
@@ -10,12 +9,12 @@ const SECRET_KEY = process.env.SECRET_KEY
 const DATA_SERVER = process.env.DATA_SERVER
 
 const login = async (req, res) => {
-  const { userName, password } = req.body
+  const { email, password } = req.body
 
   try {
-    const { data: user } = await axios.post(`${DATA_SERVER}/user/getUserByUserNameAndPassword`,
+    const { data: user } = await axios.post(`${DATA_SERVER}/user/getUserByEmailAndPassword`,
       {
-        userName,
+        email,
         password
       },
       {
@@ -122,10 +121,10 @@ const checkAccessToken = (req, res) => {
       const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
         { email: decoded.id.U_email },
         {
-        headers: {
-          'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
-        }
-      })
+          headers: {
+            'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
+          }
+        })
 
       return res.status(200).json({ user: response.data })
     })
@@ -135,11 +134,47 @@ const checkAccessToken = (req, res) => {
   }
 }
 
-
 const refreshAccessToken = (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken
 
+    if (!refreshToken) {
+      return res.status(401).json({ error: "missing_token", message: "Thiếu token xác thực" })
+    }
+
+    jwt.verify(refreshToken, process.env.SECRET_KEY, async (error, decoded) => {
+      if (error) {
+        return res.status(401).json({ message: "Phiên đăng nhập kết thúc" })
+      }
+
+      const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
+        { email: decoded.id.U_email },
+        {
+          headers: {
+            'x-service-token': process.env.INTERNAL_SERVICE_TOKEN
+          }
+        })
+
+      const accessToken = jwt.sign(
+        { id: response.data },
+        SECRET_KEY,
+        { expiresIn: "5m" }
+      )
+
+      console.log(response.data)
+
+      res.cookie("accessToken", accessToken, {
+        ...cookieOptions,
+        maxAge: 10 * 60 * 1000
+      })
+
+      return res.status(200).json({ user: response.data })
+    })
+  } catch (error) {
+    console.log("Lỗi khi refreshAccessToken", error)
+    return res.status(500).json({ error: "internal_server_error", message: "Lỗi máy chủ" })
+  }
 }
-
 
 module.exports = {
   login,

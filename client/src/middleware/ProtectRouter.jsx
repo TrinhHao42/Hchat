@@ -10,16 +10,25 @@ const ProtectRouter = ({ children }) => {
 
     useEffect(() => {
         const checkAuth = async () => {
-            try {
-                const response = await axiosInstance('/auth/checkAccessToken')
-                dispatch(loginUser({ user: response.data }))
-                setIsAuthenticated(true)
-            } catch (err) {
-                if (err.response?.data?.error === 'invalid_token') {
-                    dispatch(logOutUser())
-                    setIsAuthenticated(false)
-                }
-            }
+            await axiosInstance('/auth/checkAccessToken')
+                .then(data => {
+                    dispatch(loginUser({ user: data.data }))
+                    setIsAuthenticated(true)
+                })
+                .catch(() => {
+                    const refreshToken = async () => {
+                        await axiosInstance('/auth/refreshAccessToken')
+                            .then(data => {
+                                dispatch(loginUser({ user: data.data }))
+                                setIsAuthenticated(true)
+                            })
+                            .catch(error => {
+                                console.error("Lỗi khi làm mới token:", error)
+                            })
+                    }
+                    
+                    refreshToken()
+                })
         }
 
         checkAuth()

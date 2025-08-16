@@ -9,7 +9,7 @@ const Login = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
 
-  const nameRef = useRef(null)
+  const emailRef = useRef(null)
   const passwordRef = useRef(null)
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -21,15 +21,15 @@ const Login = () => {
     setIsLoading(true)
 
     try {
-      const userName = nameRef.current.value
+      const email = emailRef.current.value
       const password = passwordRef.current.value
 
-      if (!userName || !password) {
-        throw new Error("Please enter both username and password")
+      if (!email || !password) {
+        throw new Error("Please enter both email and password")
       }
 
       const response = await axiosInstance.post("/auth/login", {
-        userName,
+        email,
         password,
       })
 
@@ -62,20 +62,20 @@ const Login = () => {
         <form onSubmit={handleSubmit} noValidate>
           <div className="mb-4">
             <label
-              htmlFor="name"
+              htmlFor="email"
               className="block text-white mb-1 font-medium"
             >
-              Username
+              email
             </label>
             <input
               type="text"
-              name="name"
-              id="name"
-              ref={nameRef}
+              name="email"
+              id="email"
+              ref={emailRef}
               className="w-full p-3 rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
               aria-required="true"
-              aria-describedby="name-error"
+              aria-describedby="email-error"
             />
           </div>
 

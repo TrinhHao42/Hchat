@@ -1,10 +1,10 @@
 const User = require('../models/User')
 
-const getUserByUserNameAndPassword = async (req, res) => {
+const getUserByEmailAndPassword = async (req, res) => {
   try {
-    const { userName, password } = req.body
+    const { email, password } = req.body
 
-    const user = await User.findOne({ U_user_name: { $regex: `^${userName}$`, $options: 'i' } })
+    const user = await User.findOne({ U_email: { $regex: `^${email}$`, $options: 'i' } })
 
     if (!user) {
       return res.status(401).json({ message: 'Không tìm thấy người dùng' })
@@ -61,7 +61,7 @@ const getUserByToken = async (req, res) => {
 }
 
 module.exports = {
-  getUserByUserNameAndPassword,
+  getUserByEmailAndPassword,
   registerNewUser,
   getUserByToken
 }
