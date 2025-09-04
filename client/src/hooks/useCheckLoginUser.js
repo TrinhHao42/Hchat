@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
 import axios from "axios"
-import { loginUser } from "../services/UserSlice"
+import { loginUser, logOutUser } from "../services/UserSlice"
 
 const useCheckLoginUser = (url, accessToken) => {
     const [loading, setLoading] = useState(false)
@@ -30,6 +30,8 @@ const useCheckLoginUser = (url, accessToken) => {
                 })
                 .catch(error => {
                     setError(error.response?.data?.message || error.message)
+                    // Nếu accessToken lỗi thì logout
+                    dispatch(logOutUser())
                 })
                 .finally(setLoading(false))
         }

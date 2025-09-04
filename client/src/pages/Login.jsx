@@ -2,7 +2,8 @@ import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useDispatch } from "react-redux"
 import { loginUser } from "../services/UserSlice"
-import connectSocket from "../services/connectSocket"
+import { connectSocket } from "../services/connectSocket"
+import { useCustomToast } from "../hooks/useToast"
 import axiosInstance from "../configs/axios"
 
 const Login = () => {
@@ -13,11 +14,10 @@ const Login = () => {
   const passwordRef = useRef(null)
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const { showToast } = useCustomToast()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError(null)
     setIsLoading(true)
 
     try {
@@ -25,7 +25,8 @@ const Login = () => {
       const password = passwordRef.current.value
 
       if (!email || !password) {
-        throw new Error("Please enter both email and password")
+        showToast("Vui lòng nhập đầy đủ email và mật khẩu", "error")
+        return;
       }
 
       const response = await axiosInstance.post("/auth/login", {
@@ -34,12 +35,18 @@ const Login = () => {
       })
 
       dispatch(loginUser({ user: response.data }))
+      showToast("Đăng nhập thành công", "success")
       connectSocket(navigate)
       navigate("/")
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || "An error occurred during login"
-      setError(errorMessage)
+      if (err.response?.status === 403) {
+        const lastLoginTime = new Date(err.response.data.lastLoginTime);
+        const minutesRemaining = 5 - Math.floor((new Date() - lastLoginTime) / 1000 / 60);
+        showToast(`${err.response.data.message} Thời gian chờ còn lại: ${minutesRemaining} phút`, "error");
+      } else {
+        const errorMessage = err.response?.data?.message || "Đã xảy ra lỗi khi đăng nhập";
+        showToast(errorMessage, "error");
+      }
     } finally {
       setIsLoading(false)
     }
@@ -49,15 +56,11 @@ const Login = () => {
     <div className="min-h-screen w-full bg-[url(/backgroundLogin.jpg)] bg-no-repeat bg-center bg-cover flex justify-center items-center px-4">
       <div className="w-full max-w-md bg-gray-900 bg-opacity-90 rounded-2xl shadow-xl p-8 space-y-6">
         <div className="text-center text-white space-y-2">
-          <h2 className="text-3xl font-extrabold">Welcome back!</h2>
+          <h2 className="text-3xl font-extrabold"><span className="bg-gradient-to-r from-blue-400 to-teal-400 bg-clip-text text-transparent">Welcome back!</span></h2>
           <p className="text-md">Great to see you again</p>
         </div>
 
-        {error && (
-          <div className="text-red-500 text-center" role="alert">
-            {error}
-          </div>
-        )}
+
 
         <form onSubmit={handleSubmit} noValidate>
           <div className="mb-4">

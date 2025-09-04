@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux"
 import { Navigate } from "react-router-dom"
 import axiosInstance from "../configs/axios"
 import { loginUser, logOutUser } from "../services/UserSlice"
+import AuthLoading from "../components/AuthLoading"
 
 const ProtectRouter = ({ children }) => {
     const dispatch = useDispatch()
@@ -10,32 +11,28 @@ const ProtectRouter = ({ children }) => {
 
     useEffect(() => {
         const checkAuth = async () => {
-            await axiosInstance('/auth/checkAccessToken')
-                .then(data => {
-                    dispatch(loginUser({ user: data.data }))
-                    setIsAuthenticated(true)
-                })
-                .catch(() => {
-                    const refreshToken = async () => {
-                        await axiosInstance('/auth/refreshAccessToken')
-                            .then(data => {
-                                dispatch(loginUser({ user: data.data }))
-                                setIsAuthenticated(true)
-                            })
-                            .catch(error => {
-                                console.error("Lỗi khi làm mới token:", error)
-                            })
-                    }
-                    
-                    refreshToken()
-                })
-        }
-
-        checkAuth()
-    }, [dispatch])
+            try {
+                const data = await axiosInstance('/auth/checkAccessToken');
+                dispatch(loginUser({ user: data.data }));
+                setIsAuthenticated(true);
+            } catch (err) {
+                // Nếu accessToken hết hạn, thử refresh
+                try {
+                    const data = await axiosInstance('/auth/refreshAccessToken');
+                    dispatch(loginUser({ user: data.data }));
+                    setIsAuthenticated(true);
+                } catch (refreshErr) {
+                    // Nếu refreshToken cũng lỗi thì logout
+                    dispatch(logOutUser());
+                    setIsAuthenticated(false);
+                }
+            }
+        };
+        checkAuth();
+    }, [dispatch]);
 
     if (isAuthenticated === null) {
-        return <div>Loading...</div>
+        return <AuthLoading />;
     }
 
     if (!isAuthenticated) {

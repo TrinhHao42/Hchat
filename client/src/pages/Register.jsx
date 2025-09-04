@@ -123,12 +123,20 @@ const Register = () => {
 
   return (
     <div className="min-h-screen w-full bg-[url(/backgroundLogin.jpg)] bg-no-repeat bg-center bg-cover flex justify-center items-center px-4">
-      <div className="w-full max-w-md bg-gray-900 bg-opacity-90 rounded-2xl shadow-xl p-8 space-y-6">
+      <div className="w-full max-w-md bg-gray-900/95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+        
         {showForm && !successMessage && !errorMessage ? (
           <>
-            <h2 className="text-center text-white text-3xl font-extrabold">Tạo tài khoản</h2>
+            <h2 className="text-center text-3xl font-extrabold mb-2">
+              <span className="bg-gradient-to-r from-blue-400 to-teal-400 bg-clip-text text-transparent">
+                Tạo tài khoản mới
+              </span>
+            </h2>
+            <p className="text-center text-gray-400 mb-8">
+              Bắt đầu hành trình với HChat của bạn
+            </p>
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-white mb-1">
                   Email <span className="text-red-400">*</span>

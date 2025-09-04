@@ -4,6 +4,7 @@ const crypto = require('crypto')
 const transporter = require('../configs/nodeMailer')
 const { mailOptions } = require('../configs/mailOption')
 const cookieOptions = require('../configs/cookie')
+const { redisClient } = require('../../redis/config/redisClient')
 
 const SECRET_KEY = process.env.SECRET_KEY
 const DATA_SERVER = process.env.DATA_SERVER
@@ -12,6 +13,23 @@ const login = async (req, res) => {
   const { email, password } = req.body
 
   try {
+    // Kiểm tra xem người dùng đã đăng nhập chưa
+    const existingSession = await redisClient.get(`session:${email}`)
+    if (existingSession) {
+      const sessionData = JSON.parse(existingSession)
+      const lastLoginTime = new Date(sessionData.loginTime)
+      const currentTime = new Date()
+      
+      // Kiểm tra xem phiên đăng nhập cũ có còn active trong vòng 5 phút không
+      const timeDiff = (currentTime - lastLoginTime) / 1000 / 60 // Convert to minutes
+      if (timeDiff < 5) {
+        return res.status(403).json({ 
+          message: 'Tài khoản này đang được sử dụng. Vui lòng thử lại sau.',
+          lastLoginTime: sessionData.loginTime 
+        })
+      }
+    }
+
     const { data: user } = await axios.post(`${DATA_SERVER}/user/getUserByEmailAndPassword`,
       {
         email,
@@ -33,6 +51,16 @@ const login = async (req, res) => {
       { id: user },
       SECRET_KEY,
       { expiresIn: "7d" }
+    )
+
+    // Lưu session vào Redis với expiry 7 ngày
+    await redisClient.setEx(`session:${user.U_email}`, 
+      7 * 24 * 60 * 60, 
+      JSON.stringify({
+        user,
+        refreshToken,
+        loginTime: new Date().toISOString()
+      })
     )
 
     res.cookie("accessToken", accessToken, {
@@ -102,7 +130,7 @@ const verificationRegisterToken = async (req, res) => {
   }
 }
 
-const checkAccessToken = (req, res) => {
+const checkAccessToken = async (req, res) => {
   try {
     const accessToken = req.cookies.accessToken
 
@@ -116,6 +144,12 @@ const checkAccessToken = (req, res) => {
           return res.status(401).json({ error: "token_expired", message: "Token hết hạn" })
         }
         return res.status(401).json({ error: "invalid_token", message: "Sai token" })
+      }
+
+      // Kiểm tra session trong Redis
+      const session = await redisClient.get(`session:${decoded.id.U_email}`)
+      if (!session) {
+        return res.status(401).json({ error: "session_expired", message: "Phiên đăng nhập đã hết hạn" })
       }
 
       const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
@@ -134,7 +168,7 @@ const checkAccessToken = (req, res) => {
   }
 }
 
-const refreshAccessToken = (req, res) => {
+const refreshAccessToken = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken
 
@@ -145,6 +179,17 @@ const refreshAccessToken = (req, res) => {
     jwt.verify(refreshToken, process.env.SECRET_KEY, async (error, decoded) => {
       if (error) {
         return res.status(401).json({ message: "Phiên đăng nhập kết thúc" })
+      }
+
+      // Kiểm tra session trong Redis
+      const session = await redisClient.get(`session:${decoded.id.U_email}`)
+      if (!session) {
+        return res.status(401).json({ error: "session_expired", message: "Phiên đăng nhập đã hết hạn" })
+      }
+
+      const sessionData = JSON.parse(session)
+      if (sessionData.refreshToken !== refreshToken) {
+        return res.status(401).json({ error: "invalid_session", message: "Phiên đăng nhập không hợp lệ" })
       }
 
       const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
@@ -161,8 +206,6 @@ const refreshAccessToken = (req, res) => {
         { expiresIn: "5m" }
       )
 
-      console.log(response.data)
-
       res.cookie("accessToken", accessToken, {
         ...cookieOptions,
         maxAge: 10 * 60 * 1000
@@ -176,10 +219,42 @@ const refreshAccessToken = (req, res) => {
   }
 }
 
+const logout = async (req, res) => {
+  try {
+    const { email } = req.body
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Xóa session khỏi Redis
+    const deleted = await redisClient.del(`session:${email}`);
+    
+    if (!deleted) {
+      console.warn(`No session found for email: ${email}`);
+    }
+
+    // Xóa cookies với các options giống khi set
+    res.clearCookie('accessToken', {
+      ...cookieOptions
+    });
+    
+    res.clearCookie('refreshToken', {
+      ...cookieOptions
+    });
+
+    res.status(200).json({ message: 'Đăng xuất thành công' });
+  } catch (err) {
+    console.error('Lỗi khi đăng xuất:', err);
+    res.status(500).json({ message: 'Lỗi server khi đăng xuất' });
+  }
+}
+
 module.exports = {
   login,
   register,
   verificationRegisterToken,
   checkAccessToken,
-  refreshAccessToken
+  refreshAccessToken,
+  logout
 }

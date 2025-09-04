@@ -24,8 +24,9 @@ const schema = new mongoose.Schema({
     U_contacts: [
         {
             U_id: {
-                type: Number,
-                require: true
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
             },
             U_avatar: {
                 type: String,
@@ -34,6 +35,28 @@ const schema = new mongoose.Schema({
             U_remember_name: {
                 type: String,
                 require: true
+            },
+            chatroom_id: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Chatroom'
+            }
+        }
+    ],
+    U_friend_requests: [
+        {
+            from: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            status: {
+                type: String,
+                enum: ['pending', 'accepted', 'rejected'],
+                default: 'pending'
+            },
+            createdAt: {
+                type: Date,
+                default: Date.now
             }
         }
     ],

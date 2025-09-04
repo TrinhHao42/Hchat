@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useDispatch } from "react-redux"
 import axios from "axios"
 import Cookies from "js-cookie"
-import { loginUser } from "../services/UserSlice"
+import { loginUser, logOutUser } from "../services/UserSlice"
 
 const useRefreshToken = (url, refreshToken) => {
     const [loading, setLoading] = useState(false)
@@ -36,6 +36,8 @@ const useRefreshToken = (url, refreshToken) => {
                 })
                 .catch(error => {
                     setError(error.response?.data?.message || error.message)
+                    // Nếu refreshToken lỗi thì logout
+                    dispatch(logOutUser())
                 })
                 .finally(setLoading(false))
         }

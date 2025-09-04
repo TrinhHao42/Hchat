@@ -1,15 +1,20 @@
 import { io } from "socket.io-client"
 import server from "../configs/server.config"
+import { toast } from 'react-hot-toast'
+
+let socket = null;
 
 const connectSocket = (navigate) => {
-  const socket = io(server.apiGateway, {
-    path: "/socket/socket.io",
-    withCredentials: true,
-    reconnection: true,
-  })
+  if (!socket) {
+    socket = io(server.apiGateway, {
+      path: "/socket/socket.io",
+      withCredentials: true,
+      reconnection: true,
+    });
+  }
 
   socket.on("connect", () => {
-    alert("Chào mừng bạn đến với HChat")
+
   })
 
   socket.on("userConnect", () => {
@@ -18,11 +23,21 @@ const connectSocket = (navigate) => {
 
   socket.on("connect_error", (err) => {
     const connectMessageError = err.message
-    alert(`Lỗi: ${connectMessageError}`)
+    toast.error(`Lỗi kết nối: ${connectMessageError}`, {
+      duration: 3000,
+      position: 'top-right',
+      style: {
+        background: '#EF4444',
+        color: 'white',
+        padding: '16px',
+        borderRadius: '10px',
+      },
+      className: 'toast-notification',
+    });
     socket.disconnect()
   })
 
   return socket
 }
 
-export default connectSocket
+export { socket, connectSocket }

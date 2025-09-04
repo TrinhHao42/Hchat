@@ -18,18 +18,13 @@ import { ThemeModeScript } from 'flowbite-react'
 export const ThemeContext = createContext();
 
 const App = () => {
-  const [theme, setTheme] = useState(() => {
-    // Đọc theme từ localStorage
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      return savedTheme;
-    }
-    // Nếu không có theme trong localStorage, kiểm tra theme của hệ thống
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    return 'light';
-  });
+  const getInitialTheme = () => {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return saved ? saved === 'dark' : prefersDark ? 'dark' : 'light';
+  };
+
+  const [theme, setTheme] = useState(getInitialTheme());
 
   const handleThemeChange = (valueOrEvent) => {
     const newTheme = typeof valueOrEvent === 'string' ? valueOrEvent : valueOrEvent.target.value;
@@ -37,19 +32,6 @@ const App = () => {
     localStorage.setItem('theme', newTheme);
   };
 
-  // Theo dõi thay đổi theme của hệ thống
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      if (!localStorage.getItem('theme')) {
-        setTheme(e.matches ? 'dark' : 'light');
-      }
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  // Cập nhật class dark trên thẻ html
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -57,7 +39,6 @@ const App = () => {
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('theme', theme);
   }, [theme]);
 
   return (

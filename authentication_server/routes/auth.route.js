@@ -6,7 +6,8 @@ const {
   register,
   verificationRegisterToken,
   checkAccessToken,
-  refreshAccessToken
+  refreshAccessToken,
+  logout
 } = require('../controller/auth.controller')
 
 const router = express.Router()
@@ -20,5 +21,7 @@ router.get('/verify/:token', verificationRegisterToken)
 router.get("/checkAccessToken", checkAccessToken)
 
 router.get("/refreshAccessToken", refreshAccessToken)
+
+router.post("/logout", logout)
 
 module.exports = router
