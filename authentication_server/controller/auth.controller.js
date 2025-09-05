@@ -19,13 +19,13 @@ const login = async (req, res) => {
       const sessionData = JSON.parse(existingSession)
       const lastLoginTime = new Date(sessionData.loginTime)
       const currentTime = new Date()
-      
+
       // Kiểm tra xem phiên đăng nhập cũ có còn active trong vòng 5 phút không
       const timeDiff = (currentTime - lastLoginTime) / 1000 / 60 // Convert to minutes
       if (timeDiff < 5) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           message: 'Tài khoản này đang được sử dụng. Vui lòng thử lại sau.',
-          lastLoginTime: sessionData.loginTime 
+          lastLoginTime: sessionData.loginTime
         })
       }
     }
@@ -54,8 +54,8 @@ const login = async (req, res) => {
     )
 
     // Lưu session vào Redis với expiry 7 ngày
-    await redisClient.setEx(`session:${user.U_email}`, 
-      7 * 24 * 60 * 60, 
+    await redisClient.setEx(`session:${user.U_email}`,
+      7 * 24 * 60 * 60,
       JSON.stringify({
         user,
         refreshToken,
@@ -86,7 +86,6 @@ const register = async (req, res) => {
   try {
     const verificationToken = crypto.randomBytes(32).toString('hex')
     const userData = { U_email: email, U_user_name: userName, U_password: password }
-
 
     await redisClient.set(`verify:${verificationToken}`, JSON.stringify(userData), {
       EX: 60,
@@ -221,34 +220,40 @@ const refreshAccessToken = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    const { email } = req.body
-    
-    if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
+    // Lấy email từ user hoặc refreshToken trong cookies
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(400).json({ message: "Không tìm thấy refreshToken" });
     }
 
-    // Xóa session khỏi Redis
-    const deleted = await redisClient.del(`session:${email}`);
-    
-    if (!deleted) {
-      console.warn(`No session found for email: ${email}`);
+    // Giải mã refreshToken để lấy email (hoặc userId)
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, SECRET_KEY);
+    } catch (err) {
+      // Token hết hạn hoặc không hợp lệ
+      decoded = null;
     }
 
-    // Xóa cookies với các options giống khi set
-    res.clearCookie('accessToken', {
-      ...cookieOptions
-    });
-    
-    res.clearCookie('refreshToken', {
-      ...cookieOptions
-    });
+    if (decoded) {
+      const userId = decoded.id?.U_email || decoded.id?.email;
+      if (userId) {
+        // Xóa session trong Redis
+        await redisClient.del(`session:${userId}`);
+      }
+    }
 
-    res.status(200).json({ message: 'Đăng xuất thành công' });
+    // Xóa cookies với options giống khi set
+    res.clearCookie("accessToken", { ...cookieOptions });
+    res.clearCookie("refreshToken", { ...cookieOptions });
+
+    res.status(200).json({ message: "Đăng xuất hoàn toàn thành công" });
   } catch (err) {
-    console.error('Lỗi khi đăng xuất:', err);
-    res.status(500).json({ message: 'Lỗi server khi đăng xuất' });
+    console.error("Lỗi khi đăng xuất:", err);
+    res.status(500).json({ message: "Lỗi server khi đăng xuất" });
   }
-}
+};
+
 
 module.exports = {
   login,

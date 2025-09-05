@@ -3,7 +3,6 @@ const cors = require("cors")
 const router = require('./routes/auth.route')
 const cookieParse = require('cookie-parser')
 const { connectRedis } = require('../redis/config/redisClient')
-const searchRouter = require('./routes/search.route')
 require('dotenv').config()
 
 const app = express()
@@ -23,7 +22,6 @@ app.use(cors(
 app.use(cookieParse())
 
 app.use(router)
-app.use(searchRouter)
 
 app.listen(port, () => {
   console.log(`Auth server đang chạy tại http://localhost:${port}`)

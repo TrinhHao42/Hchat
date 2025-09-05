@@ -22,6 +22,6 @@ router.get("/checkAccessToken", checkAccessToken)
 
 router.get("/refreshAccessToken", refreshAccessToken)
 
-router.post("/logout", logout)
+router.get("/logout", logout)
 
 module.exports = router

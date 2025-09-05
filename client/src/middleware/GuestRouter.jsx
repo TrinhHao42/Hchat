@@ -1,30 +1,42 @@
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Navigate } from "react-router-dom";
 import AuthLoading from "../components/AuthLoading";
 import axiosInstance from "../configs/axios";
+import { logOutUser, loginUser } from "../services/UserSlice";
 
 const GuestRouter = ({ children }) => {
-  const [checking, setChecking] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const dispatch = useDispatch();
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
   const user = useSelector((state) => state.user.user?.user);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await axiosInstance('/auth/checkAccessToken');
+        const data = await axiosInstance('/auth/checkAccessToken');
+        dispatch(loginUser({ user: data.data }));
         setIsAuthenticated(true);
-      } catch {
-        setIsAuthenticated(false);
-      } finally {
-        setChecking(false);
+      } catch (err) {
+        try {
+          const data = await axiosInstance('/auth/refreshAccessToken');
+          dispatch(loginUser({ user: data.data }));
+          setIsAuthenticated(true);
+        } catch (refreshErr) {
+          dispatch(logOutUser());
+          setIsAuthenticated(false);
+        }
       }
     };
     checkAuth();
-  }, []);
+  }, [dispatch]);
 
-  if (checking) return <AuthLoading />;
-  if (isAuthenticated || user) return <Navigate to="/user/chatroom" />;
+  // Đang kiểm tra => loading
+  if (isAuthenticated === null) return <AuthLoading />;
+
+  // Nếu đã đăng nhập => redirect sang chatroom
+  if (isAuthenticated) return <Navigate to="/user/chatroom" />;
+
+  // Nếu chưa login => cho phép vào guest route
   return children;
 };
 

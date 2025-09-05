@@ -2,13 +2,17 @@ import { useState, useContext } from 'react';
 import { ThemeContext } from '../App';
 import { Card, Button, Avatar, TextInput, Label, Select } from 'flowbite-react';
 import { User, Mail, Palette, LogOut, Camera, Save, Shield, Moon, Sun, Key } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { logOutUser } from '../services/UserSlice';
+import { useNavigate } from 'react-router-dom';
 
 const SettingsPage = () => {
     const { user } = useSelector((state) => state.user.user || {});
     const { theme, handleThemeChange } = useContext(ThemeContext);
     const [displayName, setDisplayName] = useState(user?.U_user_name || '');
     const [avatar, setAvatar] = useState(user?.U_avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka');
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     const handleAvatarChange = (e) => {
         const file = e.target.files[0];
@@ -31,13 +35,14 @@ const SettingsPage = () => {
         alert('Chuyển đến trang đổi mật khẩu!');
     };
 
-    const handleLogout = () => {
-        alert('Đăng xuất thành công!');
+    const handleLogout = async () => {
+        await dispatch(logOutUser());
+        navigate("/");
     };
 
     return (
-        <div className="min-h-screen py-8 px-4 overflow-auto">
-            <div className="max-w-4xl mx-auto grid gap-6">
+        <div className="py-8 px-4 overflow-auto">
+            <div className="max-w-4xl mx-auto my-auto grid gap-6">
                 {/* Profile Section */}
                 <Card className='bg-primary-600 dark:bg-primary-300'>
                     <div className="flex items-center gap-4 mb-4">
