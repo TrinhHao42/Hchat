@@ -33,7 +33,7 @@ const registerNewUser = async (req, res) => {
 
     const savedUser = await newUser.save()
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Tạo người dùng thành công',
       user: savedUser
     })

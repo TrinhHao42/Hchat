@@ -17,7 +17,6 @@ router.post('/getUserByEmailAndPassword', checkServiceToken, getUserByEmailAndPa
 router.post('/registerNewUser', checkServiceToken, registerNewUser)
 router.post("/getUserByToken", checkServiceToken, getUserByToken)
 
-// User search and friend request endpoints
 router.get('/search', checkServiceToken, searchUsers)
 router.post('/friend-request', checkServiceToken, sendFriendRequest)
 router.put('/friend-request/:requestId', checkServiceToken, async (req, res) => {

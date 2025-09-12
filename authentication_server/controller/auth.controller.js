@@ -4,36 +4,99 @@ const crypto = require('crypto')
 const transporter = require('../configs/nodeMailer')
 const { mailOptions } = require('../configs/mailOption')
 const cookieOptions = require('../configs/cookie')
-const { redisClient } = require('../../redis/config/redisClient')
 
 const SECRET_KEY = process.env.SECRET_KEY
 const DATA_SERVER = process.env.DATA_SERVER
 
 const login = async (req, res) => {
-  const { email, password } = req.body
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ status: "error", message: "Email và mật khẩu là bắt buộc!", code: "INVALID_INPUT" });
+  }
 
   try {
-    // Kiểm tra xem người dùng đã đăng nhập chưa
-    const existingSession = await redisClient.get(`session:${email}`)
-    if (existingSession) {
-      const sessionData = JSON.parse(existingSession)
-      const lastLoginTime = new Date(sessionData.loginTime)
-      const currentTime = new Date()
+    const { data: { result: isLogin } } = await axios.post(
+      `${DATA_SERVER}/bitmap/bitmapGet`,
+      {
+        key: `userIsLogin`,
+        value: email
+      },
+      { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
+    );
 
-      // Kiểm tra xem phiên đăng nhập cũ có còn active trong vòng 5 phút không
-      const timeDiff = (currentTime - lastLoginTime) / 1000 / 60 // Convert to minutes
-      if (timeDiff < 5) {
-        return res.status(403).json({
-          message: 'Tài khoản này đang được sử dụng. Vui lòng thử lại sau.',
-          lastLoginTime: sessionData.loginTime
-        })
-      }
+    if (isLogin) {
+      return res.status(403).json({ status: "error", message: "Tài khoản đang đăng nhập nơi khác.", code: "SESSION_ACTIVE" });
     }
 
-    const { data: user } = await axios.post(`${DATA_SERVER}/user/getUserByEmailAndPassword`,
+    const { data: user } = await axios.post(
+      `${DATA_SERVER}/user/getUserByEmailAndPassword`,
+      { email, password },
+      { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
+    );
+
+    if (!user) {
+      return res.status(401).json({ status: "error", message: "Email hoặc mật khẩu không đúng!", code: "INVALID_CREDENTIALS" });
+    }
+
+    const accessToken = jwt.sign({ id: user }, process.env.SECRET_KEY, { expiresIn: "5m" });
+    const refreshToken = jwt.sign({ id: user }, process.env.SECRET_KEY, { expiresIn: "7d" });
+
+
+    res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 10 * 60 * 1000 });
+    res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+    await axios.post(
+      `${DATA_SERVER}/bitmap/bitmapAppend`,
       {
-        email,
-        password
+        key: 'userIsLogin',
+        value: email,
+        status: 1,
+      },
+      { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
+    )
+
+    return res.status(200).json({ status: "success", data: user, message: "Đăng nhập thành công!" });
+  } catch (err) {
+    if (err.response) {
+      const { status, data } = err.response;
+      const errors = {
+        400: { message: data.message || "Dữ liệu không hợp lệ!", code: "BAD_REQUEST" },
+        401: { message: data.message || "Thông tin xác thực không hợp lệ!", code: "UNAUTHORIZED" },
+        500: { message: data.message || "Lỗi máy chủ. Thử lại sau!", code: "SERVER_ERROR" },
+      };
+      const error = errors[status] || { message: data.message || "Lỗi không xác định!", code: "UNKNOWN_ERROR" };
+      return res.status(status || 500).json({ status: "error", ...error });
+    }
+
+    return res.status(503).json({ status: "error", message: "Không kết nối được máy chủ!", code: "SERVICE_UNAVAILABLE" });
+  }
+};
+
+const register = async (req, res) => {
+  const { email, userName, password } = req.body
+
+  try {
+    const result = await axios.post(
+      `${DATA_SERVER}/bitmap/bitmapGet`,
+      {
+        key: 'emailRegisted',
+        value: email,
+      },
+      { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
+    )
+
+    if (result.data.result)
+      res.status(400).json({ message: 'Email đã được sử dụng để tạo tài khoản' })
+
+    const verificationToken = crypto.randomBytes(32).toString('hex')
+    const userData = { U_email: email, U_user_name: userName, U_password: password }
+
+    await axios.post(`${DATA_SERVER}/access/accessAppend`,
+      {
+        key: `verify:${verificationToken}`,
+        value: JSON.stringify(userData),
+        ttl: 60 * 60
       },
       {
         headers: {
@@ -41,93 +104,81 @@ const login = async (req, res) => {
         }
       })
 
-    const accessToken = jwt.sign(
-      { id: user },
-      SECRET_KEY,
-      { expiresIn: "5m" }
-    )
-
-    const refreshToken = jwt.sign(
-      { id: user },
-      SECRET_KEY,
-      { expiresIn: "7d" }
-    )
-
-    // Lưu session vào Redis với expiry 7 ngày
-    await redisClient.setEx(`session:${user.U_email}`,
-      7 * 24 * 60 * 60,
-      JSON.stringify({
-        user,
-        refreshToken,
-        loginTime: new Date().toISOString()
-      })
-    )
-
-    res.cookie("accessToken", accessToken, {
-      ...cookieOptions,
-      maxAge: 10 * 60 * 1000
-    })
-
-    res.cookie("refreshToken", refreshToken, {
-      ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    })
-
-    res.status(200).json(user)
-  } catch (err) {
-    const message = err.response?.data?.message || err.message || "Đăng nhập thất bại"
-    res.status(400).json({ message })
-  }
-}
-
-const register = async (req, res) => {
-  const { email, userName, password } = req.body
-
-  try {
-    const verificationToken = crypto.randomBytes(32).toString('hex')
-    const userData = { U_email: email, U_user_name: userName, U_password: password }
-
-    await redisClient.set(`verify:${verificationToken}`, JSON.stringify(userData), {
-      EX: 60,
-    })
-
     const mailConfig = mailOptions(email, verificationToken)
     await transporter.sendMail(mailConfig)
 
     res.status(200).json({ message: 'Email xác thực đã được gửi' })
   }
   catch (err) {
-    console.error('Lỗi khi gửi email xác thực:', err)
     res.status(500).json({ message: 'Lỗi server, vui lòng thử lại sau' })
   }
 }
 
 const verificationRegisterToken = async (req, res) => {
-  const { token } = req.params
+  const { token } = req.params;
+
+  if (!token || typeof token !== 'string' || token.length < 1) {
+    return res.status(400).json({ message: 'Chứng thực không hợp lệ' });
+  }
 
   try {
-    const userDataString = await redisClient.get(`verify:${token}`)
-    if (!userDataString) {
-      return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn' })
+    const userDataResponse = await axios.post(
+      `${process.env.DATA_SERVER}/access/accessGet`,
+      { key: `verify:${token}` },
+      {
+        headers: {
+          'x-service-token': process.env.INTERNAL_SERVICE_TOKEN,
+        },
+      }
+    );
+
+    if (!userDataResponse?.data?.result) {
+      return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn.' });
     }
 
-    const userData = JSON.parse(userDataString)
+    const userData = JSON.parse(userDataResponse.data.result);
 
-    const { data: newUser } = await axios.post(`${DATA_SERVER}/user/registerNewUser`,
-      { user: userData }
-    )
+    const { data: newUser } = await axios.post(
+      `${process.env.DATA_SERVER}/user/registerNewUser`,
+      { user: userData },
+      {
+        headers: {
+          'x-service-token': process.env.INTERNAL_SERVICE_TOKEN,
+        },
+      }
+    );
 
     if (!newUser) {
-      return res.status(500).json({ message: 'Không thể tạo tài khoản, vui lòng thử lại' })
+      return res.status(500).json({ message: 'Không thể tạo tài khoản, vui lòng thử lại.' });
     }
 
-    await redisClient.del(`verify:${token}`)
+    await axios.post(
+      `${DATA_SERVER}/bitmap/bitmapAppend`,
+      {
+        key: 'emailRegisted',
+        value: userData.U_email,
+        status: 1,
+      },
+      { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
+    )
 
-    return res.status(200).json({ message: 'Xác thực thành công, bạn có thể đăng nhập' })
+    await axios.delete(`${process.env.DATA_SERVER}/access/accessRemove`, {
+      data: { key: `verify:${token}` },
+      headers: {
+        'x-service-token': process.env.INTERNAL_SERVICE_TOKEN,
+      },
+    });
+
+    return res.status(200).json({ message: 'Xác thực thành công, bạn có thể đăng nhập.' });
   } catch (err) {
-    return res.status(500).json({ message: err.message })
+    if (err.response?.status === 404) {
+      return res.status(404).json({ message: 'Chứng thực không hợp lệ.' });
+    }
+    return res.status(500).json({
+      message: err.response?.data?.message || 'Lỗi xác thực. Vui lòng thử lại.',
+    });
   }
-}
+};
 
 const checkAccessToken = async (req, res) => {
   try {
@@ -143,12 +194,6 @@ const checkAccessToken = async (req, res) => {
           return res.status(401).json({ error: "token_expired", message: "Token hết hạn" })
         }
         return res.status(401).json({ error: "invalid_token", message: "Sai token" })
-      }
-
-      // Kiểm tra session trong Redis
-      const session = await redisClient.get(`session:${decoded.id.U_email}`)
-      if (!session) {
-        return res.status(401).json({ error: "session_expired", message: "Phiên đăng nhập đã hết hạn" })
       }
 
       const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
@@ -180,17 +225,6 @@ const refreshAccessToken = async (req, res) => {
         return res.status(401).json({ message: "Phiên đăng nhập kết thúc" })
       }
 
-      // Kiểm tra session trong Redis
-      const session = await redisClient.get(`session:${decoded.id.U_email}`)
-      if (!session) {
-        return res.status(401).json({ error: "session_expired", message: "Phiên đăng nhập đã hết hạn" })
-      }
-
-      const sessionData = JSON.parse(session)
-      if (sessionData.refreshToken !== refreshToken) {
-        return res.status(401).json({ error: "invalid_session", message: "Phiên đăng nhập không hợp lệ" })
-      }
-
       const response = await axios.post(`${DATA_SERVER}/user/getUserByToken`,
         { email: decoded.id.U_email },
         {
@@ -220,34 +254,42 @@ const refreshAccessToken = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    // Lấy email từ user hoặc refreshToken trong cookies
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) {
-      return res.status(400).json({ message: "Không tìm thấy refreshToken" });
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) {
+      return res.status(400).json({ message: "Không tìm thấy accessToken" });
     }
 
-    // Giải mã refreshToken để lấy email (hoặc userId)
     let decoded;
+
     try {
-      decoded = jwt.verify(refreshToken, SECRET_KEY);
+      decoded = jwt.verify(accessToken, SECRET_KEY);
     } catch (err) {
-      // Token hết hạn hoặc không hợp lệ
       decoded = null;
     }
 
     if (decoded) {
-      const userId = decoded.id?.U_email || decoded.id?.email;
-      if (userId) {
-        // Xóa session trong Redis
-        await redisClient.del(`session:${userId}`);
+      const email = decoded.id?.U_email || decoded.id?.email;
+      if (email) {
+        await axios.post(
+          `${DATA_SERVER}/bitmap/bitmapAppend`,
+          {
+            key: 'userIsLogin',
+            value: email,
+            status: 0,
+          },
+          { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
+        )
+          .then(() => {
+            res.clearCookie("accessToken", { ...cookieOptions });
+            res.clearCookie("refreshToken", { ...cookieOptions });
+
+            res.status(200).json({ message: "Đăng xuất hoàn toàn thành công" });
+          })
+          .catch(error => {
+            res.status(400).json({ message: "lỗi trong quá trình logout" + error.data.message })
+          })
       }
     }
-
-    // Xóa cookies với options giống khi set
-    res.clearCookie("accessToken", { ...cookieOptions });
-    res.clearCookie("refreshToken", { ...cookieOptions });
-
-    res.status(200).json({ message: "Đăng xuất hoàn toàn thành công" });
   } catch (err) {
     console.error("Lỗi khi đăng xuất:", err);
     res.status(500).json({ message: "Lỗi server khi đăng xuất" });

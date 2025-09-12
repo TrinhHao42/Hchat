@@ -1,5 +1,5 @@
 const mailOptions = (email, verificationToken) => {
-  const verificationUrl = `http://localhost:5173/auth/register?token=${verificationToken}`;
+  const verificationUrl = `http://localhost:5173/verify?token=${verificationToken}`;
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="vi">
