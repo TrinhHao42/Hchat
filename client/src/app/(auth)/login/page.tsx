@@ -11,10 +11,11 @@ import axiosInstance from "@/configs/axiosInstance";
 import { useUserStore } from '@/services/store';
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { connectSocket } from "@/services/connectSocket";
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  const [formData, setFormData] = useState<FormData>({ email: "", password: "", username: null, confirmPassword: null });
+  const [formData, setFormData] = useState<FormData>({ email: "nguoila10112004@gmail.com", password: "Trinhhao123", username: null, confirmPassword: null });
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string | null>>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [toast, setToast] = useState<ToastProps | null>(null);
@@ -37,17 +38,27 @@ const LoginPage: React.FC = () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    await axiosInstance.post("/auth/login", { email: formData.email, password: formData.password })
-      .then(data => {
-        useUserStore.getState().setUser(data.data);
-        setToast({ message: "Đăng nhập thành công!", type: "success" });
-        router.push("/chatrooms");
-      })
-      .catch(err => {
-        const msg = err.response?.data?.message || "Đăng nhập thất bại";
-        setToast({ message: msg, type: "error" });
+    try {
+      const response = await axiosInstance.post("/auth/login", { 
+        email: formData.email, 
+        password: formData.password 
       });
-    setLoading(false);
+      
+      useUserStore.getState().setUser(response.data);
+      
+      setToast({ message: "Đăng nhập thành công!", type: "success" });
+      setLoading(false);
+      
+      // Redirect ngay lập tức, socket sẽ được connect ở dashboard layout
+      setTimeout(() => {
+        router.push("/chatrooms");
+      }, 1000);
+      
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Đăng nhập thất bại";
+      setToast({ message: msg, type: "error" });
+      setLoading(false);
+    }
   };
 
 
@@ -139,7 +150,10 @@ const LoginPage: React.FC = () => {
               className="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 font-semibold flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  <span>Đang đăng nhập...</span>
+                </>
               ) : (
                 <>
                   <span>Đăng nhập</span>

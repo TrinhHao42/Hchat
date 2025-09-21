@@ -5,6 +5,8 @@ import axiosInstance from '@/configs/axiosInstance';
 
 interface UserStore {
   user: User | null;
+  isHydrated: boolean;
+  setHydrated: (hydrated: boolean) => void;
   setUser: (user: Partial<User> | null) => void;
   updateUserAsync: (updates: Partial<User>) => Promise<void>;
   logoutAsync: () => Promise<void>;
@@ -14,6 +16,9 @@ const useUserStore = create<UserStore>()(
   persist(
     (set, get) => ({
       user: null,
+      isHydrated: false,
+
+      setHydrated: (hydrated) => set({ isHydrated: hydrated }),
 
       setUser: (user) => {
         if (!user) {
@@ -45,16 +50,29 @@ const useUserStore = create<UserStore>()(
 
       logoutAsync: async () => {
         try {
-          await axiosInstance('/auth/logout');
+          // Disconnect socket trước khi gọi logout API
+          const { disconnectSocket } = await import('./connectSocket');
+          disconnectSocket();
+
+          // Gọi logout API để clear cookies và cập nhật bitmap
+          await axiosInstance.post('/auth/logout');
+          console.log("Logout API called successfully");
+          
         } catch (error) {
-          console.error('Failed to logout:', error);
+          console.error('Logout API failed:', error);
+          // Vẫn tiếp tục clear local state dù API thất bại
         } finally {
+          // Luôn clear local state cuối cùng
           set({ user: null });
+          console.log("User state cleared");
         }
       },
     }),
     {
       name: 'user-storage',
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated?.(true);
+      },
     }
   )
 );

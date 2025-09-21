@@ -24,11 +24,15 @@ const UserSheet = ({ user }: { user: User | null }) => {
           )}
         </div>
 
-        <span
-          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-            isOnline ? 'bg-green-500' : 'bg-red-500'
-          }`}
-        />
+
+        <span className="absolute bottom-0 right-0 flex items-center justify-center w-3 h-3">
+          <span
+            className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${isOnline ? 'bg-green-600' : 'bg-red-600'}`}
+          />
+          <span
+            className={`relative inline-flex rounded-full w-3 h-3 ${isOnline ? 'bg-green-400' : 'bg-red-400'}`}
+          />
+        </span>
       </div>
 
       <div>

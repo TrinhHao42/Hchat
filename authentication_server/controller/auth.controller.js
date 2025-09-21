@@ -46,16 +46,6 @@ const login = async (req, res) => {
     res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 10 * 60 * 1000 });
     res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
-    await axios.post(
-      `${DATA_SERVER}/bitmap/bitmapAppend`,
-      {
-        key: 'userIsLogin',
-        value: email,
-        status: 1,
-      },
-      { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
-    )
-
     return res.status(200).json({ status: "success", data: user, message: "Đăng nhập thành công!" });
   } catch (err) {
     if (err.response) {
@@ -260,16 +250,23 @@ const logout = async (req, res) => {
     }
 
     let decoded;
+    let email = null;
 
     try {
       decoded = jwt.verify(accessToken, SECRET_KEY);
+      email = decoded.id?.U_email || decoded.id?.email;
     } catch (err) {
-      decoded = null;
+      // Token có thể đã expired, nhưng vẫn clear cookies
+      console.log("Token verification failed during logout:", err.message);
     }
 
-    if (decoded) {
-      const email = decoded.id?.U_email || decoded.id?.email;
-      if (email) {
+    // Clear cookies
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
+
+    // Nếu có email, cập nhật bitmap
+    if (email) {
+      try {
         await axios.post(
           `${DATA_SERVER}/bitmap/bitmapAppend`,
           {
@@ -278,21 +275,27 @@ const logout = async (req, res) => {
             status: 0,
           },
           { headers: { "x-service-token": process.env.INTERNAL_SERVICE_TOKEN } }
-        )
-          .then(() => {
-            res.clearCookie("accessToken", { ...cookieOptions });
-            res.clearCookie("refreshToken", { ...cookieOptions });
-
-            res.status(200).json({ message: "Đăng xuất hoàn toàn thành công" });
-          })
-          .catch(error => {
-            res.status(400).json({ message: "lỗi trong quá trình logout" + error.data.message })
-          })
+        );
+        console.log(`Đã cập nhật bitmap logout cho user: ${email}`);
+      } catch (bitmapError) {
+        console.error("Lỗi khi cập nhật bitmap logout:", bitmapError);
+        // Không throw error, vẫn cho phép logout thành công
       }
     }
+
+    return res.status(200).json({ 
+      message: "Đăng xuất thành công", 
+      email: email || "unknown" 
+    });
+    
   } catch (err) {
     console.error("Lỗi khi đăng xuất:", err);
-    res.status(500).json({ message: "Lỗi server khi đăng xuất" });
+    
+    // Vẫn clear cookies dù có lỗi
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
+    
+    return res.status(500).json({ message: "Lỗi server khi đăng xuất, nhưng đã clear cookies" });
   }
 };
 

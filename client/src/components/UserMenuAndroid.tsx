@@ -2,10 +2,29 @@
 
 import { Home, MessageCircle, Settings, LogOut, User } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useUserStore } from "@/services/store";
+import { useState } from "react";
 
 const UserAndroidMenu = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async() => {
+    if (isLoggingOut) return;
+    
+    setIsLoggingOut(true);
+    try {
+      await useUserStore.getState().logoutAsync();
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      router.push("/login");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const menuItems = [
     { label: "Home", href: "/dashboard", icon: <Home className="w-6 h-6" /> },
@@ -30,6 +49,20 @@ const UserAndroidMenu = () => {
           </Link>
         );
       })}
+      
+      {/* Logout button */}
+      <button
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+        className="flex flex-col items-center justify-center text-sm text-red-600 disabled:opacity-50"
+      >
+        {isLoggingOut ? (
+          <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <LogOut className="w-6 h-6" />
+        )}
+        <span className="mt-1">{isLoggingOut ? "Logout..." : "Logout"}</span>
+      </button>
     </nav>
   );
 };
