@@ -8,6 +8,8 @@ const {
     sendFriendRequest,
     acceptFriendRequest,
     rejectFriendRequest,
+    acceptFriendRequestByUsername,
+    rejectFriendRequestByUsername,
     getFriendRequests 
 } = require('../controller/user.controller')
 
@@ -17,9 +19,9 @@ router.post('/getUserByEmailAndPassword', checkServiceToken, getUserByEmailAndPa
 router.post('/registerNewUser', checkServiceToken, registerNewUser)
 router.post("/getUserByToken", checkServiceToken, getUserByToken)
 
-router.get('/search', checkServiceToken, searchUsers)
-router.post('/friend-request', checkServiceToken, sendFriendRequest)
-router.put('/friend-request/:requestId', checkServiceToken, async (req, res) => {
+router.get('/search', searchUsers)
+router.post('/friend-request', sendFriendRequest)
+router.put('/friend-request/:requestId', async (req, res) => {
     const { status } = req.body;
     if (status === 'accepted') {
         await acceptFriendRequest(req, res);
@@ -30,5 +32,7 @@ router.put('/friend-request/:requestId', checkServiceToken, async (req, res) => 
     }
 })
 router.get('/:userId/friend-requests', checkServiceToken, getFriendRequests)
+router.post('/friend-request/accept', checkServiceToken, acceptFriendRequestByUsername)
+router.post('/friend-request/reject', checkServiceToken, rejectFriendRequestByUsername)
 
 module.exports = router

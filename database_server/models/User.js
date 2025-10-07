@@ -45,9 +45,9 @@ const schema = new mongoose.Schema({
     U_friend_requests: [
         {
             from: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'User',
-                required: true
+                U_user_name: { type: String, required: true },
+                U_email: { type: String, required: true },
+                U_avatar: { type: String, default: "" }
             },
             status: {
                 type: String,
@@ -60,6 +60,7 @@ const schema = new mongoose.Schema({
             }
         }
     ],
+
     U_creator_id: {
         type: Number,
         require: true

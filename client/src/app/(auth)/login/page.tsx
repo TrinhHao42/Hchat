@@ -43,13 +43,12 @@ const LoginPage: React.FC = () => {
         email: formData.email, 
         password: formData.password 
       });
-      
+
       useUserStore.getState().setUser(response.data);
       
       setToast({ message: "Đăng nhập thành công!", type: "success" });
       setLoading(false);
       
-      // Redirect ngay lập tức, socket sẽ được connect ở dashboard layout
       setTimeout(() => {
         router.push("/chatrooms");
       }, 1000);

@@ -6,7 +6,11 @@ interface Contact {
 }
 
 interface friendRequests {
-    from: User;
+    from: {
+        U_user_name: string;
+        U_email: string;
+        U_avatar?: string;
+    };
     status: "pending" | "accepted" | "rejected";
 }
 

@@ -28,15 +28,16 @@ const useUserStore = create<UserStore>()(
 
         set({
           user: {
-            U_user_name: user.U_user_name || "",
-            U_email: user.U_email || "",
-            U_avatar: user.U_avatar || "",
-            U_contacts: user.U_contacts || [],
-            U_friend_requests: user.U_friend_requests || [],
-            U_status: user.U_status || "online",
+            U_user_name: user.U_user_name ?? "",
+            U_email: user.U_email ?? "",
+            U_avatar: user.U_avatar ?? "",
+            U_contacts: Array.isArray(user.U_contacts) ? user.U_contacts : [],
+            U_friend_requests: Array.isArray(user.U_friend_requests) ? user.U_friend_requests : [],
+            U_status: user.U_status ?? "online",
           } as User,
         });
       },
+
 
       updateUserAsync: async (updates) => {
         try {
@@ -50,19 +51,15 @@ const useUserStore = create<UserStore>()(
 
       logoutAsync: async () => {
         try {
-          // Disconnect socket trước khi gọi logout API
           const { disconnectSocket } = await import('./connectSocket');
           disconnectSocket();
 
-          // Gọi logout API để clear cookies và cập nhật bitmap
           await axiosInstance.post('/auth/logout');
           console.log("Logout API called successfully");
-          
+
         } catch (error) {
           console.error('Logout API failed:', error);
-          // Vẫn tiếp tục clear local state dù API thất bại
         } finally {
-          // Luôn clear local state cuối cùng
           set({ user: null });
           console.log("User state cleared");
         }

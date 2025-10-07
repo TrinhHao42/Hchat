@@ -17,9 +17,9 @@ const getUserByEmailAndPassword = async (req, res) => {
       return res.status(401).json({ message: 'Mật khẩu không đúng' })
     }
 
-    const { U_user_name, U_avatar, U_contacts, U_email } = user.toObject()
+    const { U_user_name, U_avatar, U_contacts, U_email, U_friend_requests } = user.toObject()
 
-    return res.status(200).json({ U_user_name, U_avatar, U_contacts, U_email })
+    return res.status(200).json({ U_user_name, U_avatar, U_contacts, U_email, U_friend_requests })
   } catch (error) {
     return res.status(500).json({ message: 'Lỗi server, vui lòng thử lại sau' })
   }
@@ -53,7 +53,7 @@ const getUserByToken = async (req, res) => {
 
   await User.findOne(
     { U_email: { $regex: `^${email}$`, $options: 'i' } },
-    { _id: 0, U_user_name: 1, U_email: 1, U_avatar: 1, U_contacts: 1 }
+    { _id: 0, U_user_name: 1, U_email: 1, U_avatar: 1, U_contacts: 1, U_friend_requests: 1 }
   )
     .then(user => {
       res.status(200).json(user)
@@ -61,11 +61,10 @@ const getUserByToken = async (req, res) => {
     .catch(error => res.status(500).json({ message: `lỗi server: ${error.message}` }))
 }
 
-// Search users
 const searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
-    
+
     if (!query) {
       return res.status(400).json({ message: 'Query parameter is required' });
     }
@@ -84,55 +83,183 @@ const searchUsers = async (req, res) => {
   }
 };
 
-// Send friend request
 const sendFriendRequest = async (req, res) => {
   try {
-    const { senderId, receiverId } = req.body;
+    const { senderEmail, receiverEmail } = req.body;
 
-    const receiver = await User.findById(receiverId);
-    const sender = await User.findById(senderId);
+    if (!senderEmail || !receiverEmail)
+      return res.status(400).json({ message: 'senderEmail và receiverEmail là bắt buộc' });
 
-    if (!receiver || !sender) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (senderEmail.toLowerCase() === receiverEmail.toLowerCase())
+      return res.status(400).json({ message: 'Không thể gửi lời mời cho chính mình' });
 
-    // Check if request already exists
-    const existingRequest = receiver.U_friend_requests.find(
-      request => request.from.toString() === senderId && request.status === 'pending'
+    const sender = await User.findOne({ U_email: senderEmail });
+    const receiver = await User.findOne({ U_email: receiverEmail });
+
+    if (!sender || !receiver)
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+
+    const alreadyFriends =
+      receiver.U_contacts.some(c => c.U_id?.toString() === sender._id.toString()) ||
+      sender.U_contacts.some(c => c.U_id?.toString() === receiver._id.toString());
+
+    if (alreadyFriends)
+      return res.status(400).json({ message: 'Hai người đã là bạn bè' });
+
+    const existingRequest = receiver.U_friend_requests.some(
+      r => r.from?.toString?.() === sender._id.toString() || 
+           (r.from?.U_email && r.from.U_email.toLowerCase() === senderEmail.toLowerCase())
+    );
+    if (existingRequest)
+      return res.status(400).json({ message: 'Đã gửi lời mời kết bạn trước đó' });
+
+    const newRequest = {
+      from: {
+        U_user_name: sender.U_user_name,
+        U_email: sender.U_email,
+        U_avatar: sender.U_avatar || ""
+      },
+      status: 'pending'
+    };
+
+    await User.updateOne(
+      { _id: receiver._id },
+      { $push: { U_friend_requests: newRequest } }
     );
 
-    if (existingRequest) {
-      return res.status(400).json({ message: 'Friend request already sent' });
-    }
-
-    // Check if users are already friends
-    const alreadyFriends = receiver.U_contacts.some(contact => contact.U_id.toString() === senderId) ||
-                          sender.U_contacts.some(contact => contact.U_id.toString() === receiverId);
-
-    if (alreadyFriends) {
-      return res.status(400).json({ message: 'Users are already friends' });
-    }
-
-    receiver.U_friend_requests.push({
-      from: senderId,
-      status: 'pending'
+    return res.status(200).json({
+      message: 'Gửi lời mời thành công',
+      request: newRequest
     });
 
-    await receiver.save();
-    res.status(200).json({ message: 'Friend request sent successfully' });
   } catch (error) {
     console.error('Friend request error:', error);
-    res.status(500).json({ message: 'Error sending friend request' });
+    return res.status(500).json({
+      message: 'Lỗi khi gửi lời mời kết bạn',
+      error: error.message
+    });
   }
 };
 
-// Accept friend request
+
+const acceptFriendRequestByUsername = async (req, res) => {
+  try {
+    const { userEmail, senderEmail } = req.body;
+
+    if (!userEmail || !senderEmail) {
+      return res.status(400).json({ message: 'userEmail và senderEmail là bắt buộc' });
+    }
+
+    // Find current user
+    const user = await User.findOne({ U_email: userEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'User không tìm thấy' });
+    }
+
+    // Find the friend request
+    const requestIndex = user.U_friend_requests.findIndex(
+      request => request.from.U_email === senderEmail && request.status === 'pending'
+    );
+
+    if (requestIndex === -1) {
+      return res.status(404).json({ message: 'Không tìm thấy lời mời kết bạn' });
+    }
+
+    // Update request status
+    user.U_friend_requests[requestIndex].status = 'accepted';
+
+    // Find sender
+    const fromUser = await User.findOne({ U_email: senderEmail });
+    if (!fromUser) {
+      return res.status(404).json({ message: 'Người gửi không tìm thấy' });
+    }
+
+    // Create new chatroom
+    const chatroom = new Chatroom({
+      participants: [user._id, fromUser._id],
+      type: 'private'
+    });
+    await chatroom.save();
+
+    // Add to contacts
+    user.U_contacts.push({
+      avatarUrl: fromUser.U_avatar,
+      rememberName: fromUser.U_user_name,
+      chatroomId: chatroom._id,
+      status: fromUser.U_status || 'offline'
+    });
+
+    fromUser.U_contacts.push({
+      avatarUrl: user.U_avatar,
+      rememberName: user.U_user_name,
+      chatroomId: chatroom._id,
+      status: user.U_status || 'offline'
+    });
+
+    // Save both users
+    await Promise.all([user.save(), fromUser.save()]);
+
+    // Return updated user
+    const updatedUser = await User.findOne({ U_email: userEmail })
+      .select('-U_password');
+
+    res.status(200).json({
+      message: 'Đã chấp nhận lời mời kết bạn',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Accept friend request error:', error);
+    res.status(500).json({ message: 'Lỗi khi chấp nhận lời mời kết bạn' });
+  }
+};
+
+const rejectFriendRequestByUsername = async (req, res) => {
+  try {
+    const { userEmail, senderEmail } = req.body;
+
+    if (!userEmail || !senderEmail) {
+      return res.status(400).json({ message: 'userEmail và senderEmail là bắt buộc' });
+    }
+
+    // Find current user
+    const user = await User.findOne({ U_email: userEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'User không tìm thấy' });
+    }
+
+    // Find the friend request
+    const requestIndex = user.U_friend_requests.findIndex(
+      request => request.from.U_email === senderEmail && request.status === 'pending'
+    );
+
+    if (requestIndex === -1) {
+      return res.status(404).json({ message: 'Không tìm thấy lời mời kết bạn' });
+    }
+
+    // Update request status
+    user.U_friend_requests[requestIndex].status = 'rejected';
+
+    await user.save();
+
+    // Return updated user
+    const updatedUser = await User.findOne({ U_email: userEmail })
+      .select('-U_password');
+
+    res.status(200).json({
+      message: 'Đã từ chối lời mời kết bạn',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Reject friend request error:', error);
+    res.status(500).json({ message: 'Lỗi khi từ chối lời mời kết bạn' });
+  }
+};
+
 const acceptFriendRequest = async (req, res) => {
   try {
     const { requestId } = req.params;
     const { userId } = req.body;
 
-    // Find user and request
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -147,23 +274,19 @@ const acceptFriendRequest = async (req, res) => {
       return res.status(400).json({ message: 'Friend request already processed' });
     }
 
-    // Update request status
     request.status = 'accepted';
 
-    // Get sender user
     const fromUser = await User.findById(request.from);
     if (!fromUser) {
       return res.status(404).json({ message: 'Sender not found' });
     }
 
-    // Create new chatroom
     const chatroom = new Chatroom({
       participants: [userId, request.from],
       type: 'private'
     });
     await chatroom.save();
 
-    // Add users to each other's contacts
     user.U_contacts.push({
       U_id: request.from,
       U_avatar: fromUser.U_avatar,
@@ -178,10 +301,8 @@ const acceptFriendRequest = async (req, res) => {
       chatroom_id: chatroom._id
     });
 
-    // Save both users
     await Promise.all([user.save(), fromUser.save()]);
 
-    // Return updated user with new contact
     const updatedUser = await User.findById(userId)
       .populate('U_contacts.U_id', 'U_user_name U_avatar')
       .select('-U_password');
@@ -193,38 +314,44 @@ const acceptFriendRequest = async (req, res) => {
   }
 };
 
-// Reject friend request
 const rejectFriendRequest = async (req, res) => {
   try {
     const { requestId } = req.params;
-    const { userId } = req.body;
+    const { fromEmail, toEmail } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const sender = await User.findOne({ U_email: fromEmail });
+    const receiver = await User.findOne({ U_email: toEmail });
+
+    if (!sender || !receiver) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
     }
 
-    const request = user.U_friend_requests.id(requestId);
+    const request = receiver.U_friend_requests.find(
+      (req) => req.from.toString() === sender._id.toString() && req.status === 'pending'
+    );
+
     if (!request) {
-      return res.status(404).json({ message: 'Friend request not found' });
-    }
-
-    if (request.status !== 'pending') {
-      return res.status(400).json({ message: 'Friend request already processed' });
+      return res.status(404).json({ message: 'Không tìm thấy lời mời kết bạn' });
     }
 
     request.status = 'rejected';
-    await user.save();
+    await receiver.save();
 
-    const updatedUser = await User.findById(userId)
-      .select('-U_password');
+    const updatedReceiver = await User.findById(receiver._id)
+      .select('-U_password')
+      .populate('U_friend_requests.from', 'U_user_name U_email U_avatar');
 
-    res.status(200).json(updatedUser);
+    return res.status(200).json({
+      message: 'Từ chối lời mời kết bạn thành công',
+      user: updatedReceiver
+    });
+
   } catch (error) {
-    console.error('Reject friend request error:', error);
-    res.status(500).json({ message: 'Error rejecting friend request' });
+    console.error('❌ Reject friend request error:', error);
+    return res.status(500).json({ message: 'Lỗi khi từ chối lời mời kết bạn' });
   }
 };
+
 
 // Get friend requests
 const getFriendRequests = async (req, res) => {
@@ -265,5 +392,7 @@ module.exports = {
   sendFriendRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  acceptFriendRequestByUsername,
+  rejectFriendRequestByUsername,
   getFriendRequests
 }

@@ -6,9 +6,11 @@ import {
   Settings,
   Search,
   LogOut,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import UserSheet from "./UserSheet";
+import SettingModel from "./SettingModel";
 import { useUserStore } from "@/services/store";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,6 +19,11 @@ const ChatAppMenu = () => {
   const user = useUserStore((state) => state.user);
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSettingOpen, setIsSettingOpen] = useState(false);
+
+  // Count pending friend requests
+  const pendingRequests = user?.U_friend_requests?.filter(request => request.status === "pending") || [];
+  const requestCount = pendingRequests.length;
 
   const handleLogout = async() => {
     if (isLoggingOut) return;
@@ -59,13 +66,36 @@ const ChatAppMenu = () => {
       </nav>
 
       <div className="p-3 border-t border-slate-100 space-y-1 flex-shrink-0">
+        {/* Friend Requests */}
         <Link
-          href="/settings"
-          className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors group"
+          href="/requests"
+          className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors group w-full relative"
+        >
+          <UserPlus className="w-4 h-4 text-slate-500 group-hover:text-slate-600 flex-shrink-0" />
+          <span className="font-medium text-sm truncate">Lời mời kết bạn</span>
+          {requestCount > 0 && (
+            <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+              {requestCount > 99 ? '99+' : requestCount}
+            </span>
+          )}
+        </Link>
+
+        {/* Search Friends */}
+        <Link
+          href="/search"
+          className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors group w-full"
+        >
+          <Search className="w-4 h-4 text-slate-500 group-hover:text-slate-600 flex-shrink-0" />
+          <span className="font-medium text-sm truncate">Tìm kiếm bạn bè</span>
+        </Link>
+
+        <button
+          onClick={() => setIsSettingOpen(true)}
+          className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors group w-full"
         >
           <Settings className="w-4 h-4 text-slate-500 group-hover:text-slate-600 flex-shrink-0" />
           <span className="font-medium text-sm truncate">Cài đặt</span>
-        </Link>
+        </button>
 
         <button
           className="cursor-pointer flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-red-50 text-red-600 w-full transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
@@ -82,6 +112,14 @@ const ChatAppMenu = () => {
           </span>
         </button>
       </div>
+      
+
+
+      {/* Settings Modal */}
+      <SettingModel 
+        isOpen={isSettingOpen} 
+        onClose={() => setIsSettingOpen(false)} 
+      />
     </aside>
   );
 };

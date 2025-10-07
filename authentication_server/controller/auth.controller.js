@@ -77,7 +77,7 @@ const register = async (req, res) => {
     )
 
     if (result.data.result)
-      res.status(400).json({ message: 'Email đã được sử dụng để tạo tài khoản' })
+      return res.status(400).json({ message: 'Email đã được sử dụng để tạo tài khoản' })
 
     const verificationToken = crypto.randomBytes(32).toString('hex')
     const userData = { U_email: email, U_user_name: userName, U_password: password }
@@ -97,10 +97,10 @@ const register = async (req, res) => {
     const mailConfig = mailOptions(email, verificationToken)
     await transporter.sendMail(mailConfig)
 
-    res.status(200).json({ message: 'Email xác thực đã được gửi' })
+    return res.status(200).json({ message: 'Email xác thực đã được gửi' })
   }
   catch (err) {
-    res.status(500).json({ message: 'Lỗi server, vui lòng thử lại sau' })
+    return res.status(500).json({ message: 'Lỗi server, vui lòng thử lại sau' })
   }
 }
 
